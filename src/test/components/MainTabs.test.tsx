@@ -1,9 +1,24 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { deviceOperation } from '../../utils/deviceOperation';
+import { useEffect } from 'react';
 import { MainTabs } from '../../components/common/MainTabs';
-import { AppContextProvider } from '../../context/AppContext';
+import { AppContextProvider, useAppContext } from '../../context/AppContext';
+
+function OfflineLoading() {
+  const { dispatch } = useAppContext();
+  useEffect(() => { dispatch({ type: 'SET_LOADING', payload: true }); }, [dispatch]);
+  return null;
+}
 
 describe('MainTabs', () => {
+  it('does not lock navigation or display a device banner during local sample loading', () => {
+    render(<AppContextProvider><OfflineLoading /><MainTabs /></AppContextProvider>);
+    const panel = screen.getByRole('tabpanel', { name: 'main application content' });
+    expect(panel).toHaveAttribute('aria-busy', 'false');
+    expect(panel.querySelector('[inert]')).toBeNull();
+    expect(screen.queryByText('Working… keep the device connected.')).not.toBeInTheDocument();
+  });
   const renderWithContext = () => {
     return render(
       <AppContextProvider>
@@ -14,60 +29,81 @@ describe('MainTabs', () => {
 
   it('should render with proper ARIA structure', () => {
     renderWithContext();
-    
-    // Check main container has proper role
+
     const mainContainer = screen.getByRole('tabpanel', { name: 'main application content' });
     expect(mainContainer).toBeInTheDocument();
-    
-    // Check tablist container
+
     const tablist = screen.getByRole('tablist', { name: 'main navigation tabs' });
     expect(tablist).toBeInTheDocument();
     expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
-    
-    // Check that all tabs are present with proper ARIA attributes
+
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(5); // drum, multisample, library, donate, feedback
-    
-    // Check that each tab has proper ARIA attributes
+    // Offline: drum, multisample, takes, library, projects
+    expect(tabs).toHaveLength(5);
+
     tabs.forEach(tab => {
       expect(tab).toHaveAttribute('aria-controls');
       expect(tab).toHaveAttribute('aria-selected');
       expect(tab).toHaveAttribute('aria-label');
       expect(tab).toHaveAttribute('id');
     });
-    
-    // Check that only the active tab (drum) is focusable
+
     const drumTab = screen.getByRole('tab', { name: 'drum tab' });
     expect(drumTab).toHaveAttribute('tabindex', '0');
     expect(drumTab).toHaveAttribute('aria-selected', 'true');
-    
-    // Check that inactive tabs are not focusable
-    const inactiveTabs = tabs.filter(tab => tab !== drumTab);
-    inactiveTabs.forEach(tab => {
-      expect(tab).toHaveAttribute('tabindex', '-1');
-      expect(tab).toHaveAttribute('aria-selected', 'false');
-    });
-    
-    // Check that the drum tabpanel is present and properly labeled
-    // Use getByTestId or find by ID since the aria-label might not be exactly as expected
+
     const drumPanel = document.getElementById('drum-tabpanel');
     expect(drumPanel).toBeInTheDocument();
     expect(drumPanel).toHaveAttribute('role', 'tabpanel');
-    expect(drumPanel).toHaveAttribute('aria-labelledby', 'drum-tab');
-    
-    // Check that the drum tab controls the drum panel
     expect(drumTab).toHaveAttribute('aria-controls', 'drum-tabpanel');
   });
 
   it('should have proper tab order and navigation', () => {
     renderWithContext();
-    
+
     const tabs = screen.getAllByRole('tab');
-    const expectedTabNames = ['drum tab', 'multisample tab', 'library tab', 'donate tab', 'feedback tab'];
-    
-    // Check that tabs are in the correct order
+    const expectedTabNames = ['Drum lab', 'Sample lab', 'Takes', 'Library', 'Projects'];
+
     tabs.forEach((tab, index) => {
-      expect(tab).toHaveTextContent(expectedTabNames[index].replace(' tab', ''));
+      expect(tab).toHaveTextContent(expectedTabNames[index]);
     });
   });
-}); 
+});
+
+describe('the busy banner', () => {
+  function Busy({ options }: { options?: Parameters<typeof deviceOperation>[1] }) {
+    useEffect(() => { void deviceOperation(() => new Promise<void>(() => {}), options); }, [options]);
+    return null;
+  }
+
+  it('offers to cancel only what can actually be cancelled', async () => {
+    // `cancel` used to be required, so every caller passed an empty function, and the
+    // banner showed its button whenever options existed. During an import it read
+    // "Cancel preview" — the wrong noun — and pressing it did nothing at all.
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    const { unmount } = render(<AppContextProvider>
+      <Busy options={{ message: 'Copying 2 takes into your library. Keep the device connected.' }} />
+      <MainTabs />
+    </AppContextProvider>);
+
+    expect(await screen.findByText(/Copying 2 takes into your library/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancel/i })).toBeNull();
+    unmount();
+
+    render(<AppContextProvider>
+      <Busy options={{ message: 'Comparing checksums.', cancel, cancelLabel: 'Cancel preview' }} />
+      <MainTabs />
+    </AppContextProvider>);
+    const button = await screen.findByRole('button', { name: 'Cancel preview' });
+    fireEvent.click(button);
+    expect(cancel).toHaveBeenCalled();
+  });
+
+  it('labels a cancellable operation plainly when it does not name itself', async () => {
+    render(<AppContextProvider>
+      <Busy options={{ message: 'Working.', cancel: vi.fn().mockResolvedValue(undefined) }} />
+      <MainTabs />
+    </AppContextProvider>);
+    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+});

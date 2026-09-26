@@ -18,11 +18,18 @@ import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { saveDrumSettingsAsDefault } from '../../utils/defaultSettings';
 import { parseOP1DrumPreset, isOP1DrumPreset } from '../../utils/op1DrumPresetParser';
 import { AUDIO_CONSTANTS } from '../../utils/constants';
+import { isTauriAvailable } from '../../utils/tauriBridge';
+import { detectDeviceKind } from '../../utils/teDevices';
+import { useConfirmedSend } from '../../hooks/useConfirmedSend';
+import { SendReview } from '../common/SendReview';
+import { generateDrumPatch } from '../../utils/patchGeneration';
+import JSZip from 'jszip';
 
 export function DrumTool() {
   const { state, dispatch } = useAppContext();
   const { handleDrumSampleUpload, clearDrumSample } = useFileUpload();
   const { generateDrumPatchFile } = usePatchGeneration();
+  const send = useConfirmedSend();
   const [isMobile, setIsMobile] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -162,7 +169,7 @@ export function DrumTool() {
           id: Date.now().toString(),
           type: 'success',
           title: 'OP-1 preset imported',
-          message: `"${preset.name}" loaded with ${preset.samples.length} samples`
+          message: `"${preset.name}" loaded with ${preset.samples.length} ${preset.samples.length === 1 ? 'sample' : 'samples'}`
         }
       });
 
@@ -287,16 +294,51 @@ export function DrumTool() {
     }
   };
 
+  // One reviewed confirmation, then a verified write recorded in transfer history.
+  const handleSendToDevice = () => {
+    const patchName = state.drumSettings.presetName.trim() || 'drum_patch';
+    send.request(async () => {
+      const patchBlob = await generateDrumPatch(
+        state,
+        patchName,
+        state.drumSettings.sampleRate || undefined,
+        state.drumSettings.bitDepth || undefined,
+        state.drumSettings.channels === 1 ? 'mono' : 'keep',
+        state.drumSettings.audioFormat,
+      );
+      const zip = await JSZip.loadAsync(patchBlob);
+      const files: Array<{ name: string; data: Uint8Array }> = [];
+      for (const [name, file] of Object.entries(zip.files)) {
+        if (file.dir) continue;
+        files.push({ name, data: await file.async('uint8array') });
+      }
+      const rate = state.drumSettings.sampleRate ? `${(state.drumSettings.sampleRate / 1000).toFixed(1)} khz` : 'source rate';
+      const depth = state.drumSettings.bitDepth ? `${state.drumSettings.bitDepth}-bit` : 'source depth';
+      return {
+        name: patchName,
+        category: 'drum',
+        files,
+        format: `${rate} · ${depth} · ${state.drumSettings.channels === 1 ? 'mono' : 'stereo kept'} · .${state.drumSettings.audioFormat}`,
+      };
+    });
+  };
+
   const handleSaveSettingsAsDefault = () => {
     try {
-      saveDrumSettingsAsDefault(state.drumSettings, state.importedDrumPreset);
+      // Report what happened rather than assuming. These settings are stored in a
+      // cookie, which the browser discards without error past about 4 KB — and they
+      // carry the imported preset, which is the large part. Saying "saved as default"
+      // for something that did not save is worse than saying nothing.
+      const saved = saveDrumSettingsAsDefault(state.drumSettings, state.importedDrumPreset);
       dispatch({
         type: 'ADD_NOTIFICATION',
         payload: {
           id: Date.now().toString(),
-          type: 'success',
-          title: 'settings saved',
-          message: 'drum settings saved as default'
+          type: saved ? 'success' : 'error',
+          title: saved ? 'settings saved' : 'settings not saved',
+          message: saved
+            ? 'drum settings saved as default'
+            : 'These settings are too large to store — an imported preset is usually the reason. Clear the imported preset and save again, or keep using them for this session only.'
         }
       });
     } catch (error) {
@@ -445,7 +487,7 @@ export function DrumTool() {
 
   return (
     <div style={{ 
-      fontFamily: '"Montserrat", "Arial", sans-serif',
+      fontFamily: 'var(--font-ui)',
       display: 'flex',
       flexDirection: 'column',
       height: '100%'
@@ -489,7 +531,7 @@ export function DrumTool() {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
               <h3 style={{
                 margin: 0,
-                color: '#222',
+                color: 'var(--color-text-primary)',
                 fontSize: '1.25rem',
                 fontWeight: 300,
               }}>
@@ -541,7 +583,7 @@ export function DrumTool() {
               <input
                 type="file"
                 multiple
-                accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.ogg,.flac"
+                accept=".wav,.aif,.aiff,audio/*"
                 style={{ display: 'none' }}
                 onChange={(e) => {
                   const files = [...(e.target.files || [])];
@@ -762,6 +804,8 @@ export function DrumTool() {
           onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_DRUM_FILENAME_SEPARATOR', payload: separator })}
           audioFormat={state.drumSettings.audioFormat}
           onAudioFormatChange={(format) => dispatch({ type: 'SET_DRUM_AUDIO_FORMAT', payload: format })}
+          onSendToDevice={isTauriAvailable() && (!state.tauriDevice || detectDeviceKind(state.tauriDevice.model) === 'op-xy') ? handleSendToDevice : undefined}
+          isDeviceConnected={!!state.tauriDevice && detectDeviceKind(state.tauriDevice.model) === 'op-xy'}
         />
       </div>
 
@@ -786,6 +830,9 @@ export function DrumTool() {
         isOpen={bulkEditModal}
         onClose={() => setBulkEditModal(false)}
       />
+
+      <SendReview pending={send.pending} sending={send.sending} onConfirm={() => void send.confirm()} onCancel={send.cancel}
+        reconciliation={send.reconciliation} checking={send.checking} onCheck={() => void send.check()} onComplete={() => void send.complete()} />
     </div>
   );
 }

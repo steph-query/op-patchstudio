@@ -27,6 +27,8 @@ interface GeneratePresetSectionProps {
   onFilenameSeparatorChange: (separator: FilenameSeparator) => void;
   audioFormat: AudioFormat;
   onAudioFormatChange: (format: AudioFormat) => void;
+  onSendToDevice?: () => void;
+  isDeviceConnected?: boolean;
 }
 
 export function GeneratePresetSection({
@@ -49,7 +51,9 @@ export function GeneratePresetSection({
   filenameSeparator,
   onFilenameSeparatorChange,
   audioFormat,
-  onAudioFormatChange
+  onAudioFormatChange,
+  onSendToDevice,
+  isDeviceConnected,
 }: GeneratePresetSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -84,7 +88,7 @@ export function GeneratePresetSection({
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
           <h3 style={{
             margin: 0,
-            color: '#222',
+            color: 'var(--color-text-primary)',
             fontSize: '1.25rem',
             fontWeight: 300,
           }}>
@@ -321,7 +325,7 @@ export function GeneratePresetSection({
             <div style={{
               fontSize: '0.9rem',
               fontWeight: '500',
-              color: '#222',
+              color: 'var(--color-text-primary)',
               marginBottom: '0.25rem'
             }}>
               preset summary
@@ -332,12 +336,12 @@ export function GeneratePresetSection({
               flexDirection: 'column',
               gap: '0.25rem',
               fontSize: '0.8rem',
-              color: '#666'
+              color: 'var(--color-text-secondary)'
             }}>
               {/* Validation Message - only show when can't generate */}
               {!canGeneratePatch && !hasPresetName && (
                 <div style={{
-                  color: '#666',
+                  color: 'var(--color-text-secondary)',
                   fontSize: '0.8rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -351,14 +355,14 @@ export function GeneratePresetSection({
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <i className={`fas ${hasLoadedSamples ? 'fa-check' : 'fa-times'}`} 
-                   style={{ color: '#666', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
+                   style={{ color: 'var(--color-text-secondary)', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
                 <span>{loadedSamplesCount} {loadedSamplesCount === 1 ? 'sample' : 'samples'} loaded</span>
               </div>
               
               {/* Show load samples message when no samples but have preset name */}
               {!canGeneratePatch && hasPresetName && !hasLoadedSamples && (
                 <div style={{
-                  color: '#666',
+                  color: 'var(--color-text-secondary)',
                   fontSize: '0.8rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -373,7 +377,7 @@ export function GeneratePresetSection({
               {/* Only show custom settings info when samples are loaded and settings have been changed */}
               {hasLoadedSamples && editedSamplesCount > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="fas fa-info-circle" style={{ color: '#666', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
+                  <i className="fas fa-info-circle" style={{ color: 'var(--color-text-secondary)', fontSize: '0.7rem', width: '12px', textAlign: 'center' }}></i>
                   <span>{editedSamplesCount} {editedSamplesCount === 1 ? 'sample' : 'samples'} with custom settings</span>
                 </div>
               )}
@@ -381,7 +385,7 @@ export function GeneratePresetSection({
               {/* File Format Info - only show when ready to generate */}
               {canGeneratePatch && (
                 <div style={{
-                  color: '#666',
+                  color: 'var(--color-text-secondary)',
                   fontSize: '0.8rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -559,8 +563,48 @@ export function GeneratePresetSection({
             <i className="fas fa-download" style={{ fontSize: '1rem' }}></i>
             download preset
           </button>
+          {onSendToDevice && (
+            <button
+              onClick={onSendToDevice}
+              disabled={!canGeneratePatch || !isDeviceConnected}
+              title={!isDeviceConnected ? 'connect your op-xy first' : undefined}
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem 1.5rem',
+                border: 'none',
+                borderRadius: '6px',
+                backgroundColor: canGeneratePatch && isDeviceConnected ? '#24a148' : 'var(--color-border-medium)',
+                color: 'var(--color-white)',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                cursor: canGeneratePatch && isDeviceConnected ? 'pointer' : 'not-allowed',
+                opacity: canGeneratePatch && isDeviceConnected ? 1 : 0.6,
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.75rem',
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                if (canGeneratePatch && isDeviceConnected) {
+                  e.currentTarget.style.backgroundColor = '#198038';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (canGeneratePatch && isDeviceConnected) {
+                  e.currentTarget.style.backgroundColor = '#24a148';
+                }
+              }}
+            >
+              <i className="fas fa-upload" style={{ fontSize: '1rem' }}></i>
+              send to device
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
-} 
+}

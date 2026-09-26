@@ -120,6 +120,12 @@ describe('usePatchGeneration', () => {
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
       midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false,
       drumSettings: {
         sampleRate: 44100,
         bitDepth: 16,
@@ -163,8 +169,14 @@ describe('usePatchGeneration', () => {
       await result.current.generateDrumPatchFile('Test Drum Kit')
     })
     
+    // Passing the right name and the current state *is* what this hook does, so asserting
+    // only that the generator was called leaves its whole job unchecked — a hook that sent
+    // the wrong preset name, or someone else's state, would have passed.
     const { generateDrumPatch } = await import('../../utils/patchGeneration');
-    expect(vi.mocked(generateDrumPatch)).toHaveBeenCalled()
+    expect(vi.mocked(generateDrumPatch)).toHaveBeenCalledTimes(1)
+    const [state, name] = vi.mocked(generateDrumPatch).mock.calls[0];
+    expect(name).toBe('Test Drum Kit')
+    expect(state.drumSettings, 'the hook must hand over the current drum settings').toBe(defaultMockState.state.drumSettings)
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'SET_LOADING'
@@ -180,7 +192,10 @@ describe('usePatchGeneration', () => {
     })
     
     const { generateMultisamplePatch } = await import('../../utils/patchGeneration');
-    expect(vi.mocked(generateMultisamplePatch)).toHaveBeenCalled()
+    expect(vi.mocked(generateMultisamplePatch)).toHaveBeenCalledTimes(1)
+    const [state, name] = vi.mocked(generateMultisamplePatch).mock.calls[0];
+    expect(name).toBe('Test Multisample')
+    expect(state.multisampleSettings, 'the hook must hand over the current multisample settings').toBe(defaultMockState.state.multisampleSettings)
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'SET_LOADING'
@@ -259,7 +274,13 @@ describe('usePatchGeneration', () => {
         importedMultisamplePreset: null,
         isSessionRestorationModalOpen: false,
         sessionInfo: null,
-        midiNoteMapping: 'C3' as const
+        midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
       },
       dispatch: mockDispatch
     })
@@ -332,12 +353,15 @@ describe('usePatchGeneration', () => {
       await result.current.generateMultisamplePatchFile('Test Multisample')
     })
     
-    // Verify that the state passed to patch generation contains envelope values
+    // The comment here used to say "contains envelope values" while only asserting that the
+    // objects existed — so `{ amp: {}, filter: {} }`, or every value silently zeroed, passed.
+    // An imported preset's envelope reaching the generator with the wrong numbers is a patch
+    // that sounds wrong, so assert the numbers.
     expect(capturedJson).toBeDefined();
-    expect(capturedJson.importedMultisamplePreset).toBeDefined();
-    expect(capturedJson.importedMultisamplePreset.envelope).toBeDefined();
-    expect(capturedJson.importedMultisamplePreset.envelope.amp).toBeDefined();
-    expect(capturedJson.importedMultisamplePreset.envelope.filter).toBeDefined();
+    expect(capturedJson.importedMultisamplePreset.envelope).toEqual({
+      amp: { attack: 500, decay: 6000, sustain: 22000, release: 12000 },
+      filter: { attack: 0, decay: 5000, sustain: 18000, release: 10000 },
+    });
     
     // Verify specific envelope values are present
     expect(capturedJson.importedMultisamplePreset.envelope.amp.attack).toBe(500);
@@ -527,7 +551,7 @@ describe('usePatchGeneration', () => {
       // Import the real modules for this integration test
       const JSZip = (await import('jszip')).default;
       const { baseMultisampleJson } = await import('../../components/multisample/baseMultisampleJson');
-      const { mergeImportedMultisampleSettings } = await import('../../utils/jsonImport');
+      const { mergeImportedSettings } = await import('../../utils/jsonImport');
       
       const zip = new JSZip();
       const sanitizedName = patchName || 'multisample_patch';
@@ -538,7 +562,7 @@ describe('usePatchGeneration', () => {
       patchJson.regions = [];
 
       // Merge imported preset settings if they exist
-      mergeImportedMultisampleSettings(patchJson, (state as any).importedMultisamplePreset);
+      mergeImportedSettings(patchJson, (state as any).importedMultisamplePreset);
 
       // Add patch.json to ZIP
       zip.file("patch.json", JSON.stringify(patchJson, null, 2));
@@ -643,7 +667,13 @@ describe('usePatchGeneration', () => {
         importedMultisamplePreset: null, // No preset imported
         isSessionRestorationModalOpen: false,
         sessionInfo: null,
-        midiNoteMapping: 'C3' as const
+        midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
       }
     });
 

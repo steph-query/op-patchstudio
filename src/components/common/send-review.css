@@ -1,0 +1,21 @@
+/* The one confirmation before a device write. */
+.send-review-backdrop { position: fixed; inset: 0; background: rgba(28, 28, 26, .55); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 60; }
+.send-review { background: var(--color-surface-primary); border: 1px solid var(--color-border-strong); border-radius: var(--radius-panel); padding: 24px; max-width: 520px; width: 100%; max-height: 80vh; overflow-y: auto; font-size: 13px; line-height: 1.7; }
+.send-review h2 { font-size: 18px; font-weight: 500; letter-spacing: -.02em; margin: 0 0 16px; }
+.send-review dl { display: grid; gap: 8px; margin: 0 0 16px; }
+.send-review dl div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
+.send-review dt { color: var(--color-text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.send-review dd { margin: 0; overflow-wrap: anywhere; }
+.send-review-files { list-style: none; margin: 0 0 16px; padding: 0; max-height: 180px; overflow-y: auto; border-top: 1px solid var(--color-border-subtle); }
+.send-review-files li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--color-border-subtle); font-size: 11px; }
+.send-review-files code { overflow-wrap: anywhere; }
+.send-review-note { color: var(--color-text-secondary); font-size: 11px; margin: 0 0 20px; }
+.send-review-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.send-review-reconcile { border: 1px solid var(--color-border-strong); border-radius: 7px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; }
+.send-review-reconcile strong { text-transform: lowercase; }
+.send-review-reconcile p { margin: 6px 0 10px; color: var(--color-text-secondary); }
+.send-review-reconcile ul { list-style: none; margin: 0; padding: 0; }
+.send-review-reconcile li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 11px; }
+.send-review-reconcile span { color: var(--color-text-secondary); }
+.send-review-reconcile button { margin-top: 10px; width: 100%; }
+.send-review-reconcile .send-review-dead-end { margin: 10px 0 0; }

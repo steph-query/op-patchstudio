@@ -3,10 +3,7 @@ import { AppHeader } from './components/common/AppHeader';
 import { MainTabs } from './components/common/MainTabs';
 import { NotificationSystem } from './components/common/NotificationSystem';
 import { AppContextProvider, useAppContext } from './context/AppContext';
-import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import { Footer } from './components/common/Footer';
-import { FeedbackPage } from './components/common/FeedbackPage';
-import { DonatePage } from './components/common/DonatePage';
 import { SessionRestorationModal } from './components/common/SessionRestorationModal';
 import { useSessionManagement } from './hooks/useSessionManagement';
 import './theme/device-themes.scss';
@@ -41,12 +38,6 @@ function AppContent() {
   const { state, dispatch } = useAppContext();
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [showRotateOverlay, setShowRotateOverlay] = useState(false);
-  const [currentRoute, setCurrentRoute] = useState(() => {
-    // Initialize route from URL hash
-    if (window.location.hash === '#/feedback') return 'feedback';
-    if (window.location.hash === '#/donate') return 'donate';
-    return 'home';
-  });
 
   // Session management
   const { loadSession, declineSessionRestoration } = useSessionManagement();
@@ -62,21 +53,6 @@ function AppContent() {
     };
   }, []);
 
-  // Handle routing
-  useEffect(() => {
-    const handleHashChange = () => {
-      if (window.location.hash === '#/feedback') {
-        setCurrentRoute('feedback');
-      } else if (window.location.hash === '#/donate') {
-        setCurrentRoute('donate');
-      } else {
-        setCurrentRoute('home');
-      }
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
 
   useEffect(() => {
     const checkDeviceAndOrientation = () => {
@@ -126,35 +102,18 @@ function AppContent() {
 
   return (
     <>
-      <Theme theme="white" className="opxy-theme">
-        <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-surface-tertiary)' }}>
-          <Content style={{ 
-            padding: isMobileDevice ? '0.5rem' : '2rem',
-            backgroundColor: 'var(--color-surface-tertiary)',
-            maxWidth: '1000px',
-            margin: '0 auto',
-            width: '100%',
-            boxSizing: 'border-box'
-          }}>
-            {currentRoute === 'feedback' ? (
-              <FeedbackPage />
-            ) : currentRoute === 'donate' ? (
-              <DonatePage />
-            ) : (
-              <>
-                <AppHeader />
-                <MainTabs />
-                
-                <NotificationSystem 
-                  notifications={state.notifications}
-                  onDismiss={handleDismissNotification}
-                />
-                
-                <PWAInstallPrompt />
-                
-                <Footer />
-              </>
-            )}
+      <Theme theme="white" className="fieldwork-theme">
+        <div className="studio-shell">
+          <Content className={'studio-content' + (isMobileDevice ? ' is-mobile' : '')}>
+            <AppHeader />
+            <MainTabs />
+
+            <NotificationSystem
+              notifications={state.notifications}
+              onDismiss={handleDismissNotification}
+            />
+
+            <Footer />
           </Content>
         </div>
       </Theme>

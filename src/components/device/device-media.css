@@ -1,0 +1,112 @@
+.device-media{padding:0;color:var(--color-text-primary)}.device-media-hero{display:flex;align-items:flex-end;justify-content:space-between;padding:2.25rem 2rem 1.5rem;background:var(--color-surface-secondary);border-bottom:1px solid var(--color-border-subtle)}.device-media-hero span,.device-media-hero p{font:11px/1.4 var(--font-mono);color:var(--color-text-secondary);text-transform:lowercase}.device-media-hero h2{margin:.2rem 0;font-size:2rem;font-weight:450;letter-spacing:-.04em}.media-primary,.media-export{border:1px solid var(--color-text-primary);background:var(--color-text-primary);color:var(--color-surface-primary);padding:.65rem 1rem;font:11px var(--font-mono);text-transform:lowercase;cursor:pointer}.media-primary:disabled,.media-export:disabled{opacity:.35;cursor:default}.media-toolbar{display:flex;gap:.5rem;padding:1rem 2rem;border-bottom:1px solid var(--color-border-subtle)}.media-toolbar input{flex:1;border:1px solid var(--color-border-secondary);background:var(--color-surface-primary);padding:.7rem .85rem;font:13px var(--font-mono)}.media-toolbar select{min-width:150px;border:1px solid var(--color-border-secondary);background:var(--color-surface-primary);padding:.6rem;font:12px var(--font-mono)}.media-row{display:grid;grid-template-columns:24px 36px minmax(180px,1fr) 125px 80px 72px;gap:.7rem;align-items:center;min-height:64px;padding:.55rem 2rem;border-bottom:1px solid var(--color-border-subtle)}.media-row:hover{background:var(--color-surface-secondary)}.media-play{width:30px;height:30px;border:1px solid var(--color-border-secondary);border-radius:50%;background:white;font-size:10px;cursor:pointer}.media-play.is-playing{background:var(--color-text-primary);color:var(--color-surface-primary)}.media-name{min-width:0}.media-name strong,.media-name small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.media-name strong{font-size:14px;font-weight:550}.media-name small,.media-row time,.media-row code{font:10px var(--font-mono);color:var(--color-text-tertiary)}.media-row code{text-align:right}.media-export{padding:.45rem .5rem;background:white;color:var(--color-text-primary);border-color:var(--color-border-secondary)}.media-empty{padding:4rem 2rem;text-align:center;color:var(--color-text-tertiary);font:12px var(--font-mono)}@media(max-width:720px){.device-media-hero{padding:1.5rem 1rem}.media-toolbar{padding:.75rem 1rem}.media-row{grid-template-columns:22px 34px 1fr 64px;padding:.55rem 1rem}.media-row time,.media-row code{display:none}.device-media-hero h2{font-size:1.5rem}}
+.connection-panel { margin-bottom: 16px; padding: 18px 22px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-panel); background: var(--color-surface-primary); box-shadow: 0 3px 14px var(--shadow-subtle); }
+.connection-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; font: 10px/1.4 var(--font-mono); letter-spacing: .09em; color: var(--color-text-secondary); }
+.connection-heading span:first-child { color: var(--color-accent-primary); font-weight: 600; }
+.connection-controls { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.connection-controls button, .connection-controls select, .media-mixer button { min-height: 40px; padding: 9px 14px; background: var(--color-surface-primary); color: var(--color-text-primary); border: 1px solid var(--color-border-secondary); border-radius: var(--radius-control); font: 12px var(--font-ui); }
+.connection-controls button:first-of-type { background: var(--color-interactive-primary); color: var(--color-text-inverse); border-color: var(--color-interactive-primary); }
+.connection-controls button:hover:not(:disabled), .media-export:hover:not(:disabled) { filter: brightness(.94); }
+.connection-controls button:disabled { opacity: .45; cursor: not-allowed; }
+.connection-panel p, .connection-panel details { margin: .5rem 0 0; font-size: 12px; color: var(--color-text-secondary); }
+.device-busy { position: sticky; top: 10px; z-index: 100; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-radius: var(--radius-control); margin-bottom: 12px; background: var(--color-interactive-primary); color: var(--color-text-inverse); font: 12px/1.5 var(--font-ui); }
+.device-busy button { border: 1px solid #fff8; background: transparent; color: inherit; border-radius: var(--radius-control); padding: 8px 12px; flex: none; }
+[inert] { opacity: .65; }
+.media-preview-controls, .media-mixer { padding: .8rem 2rem; display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; background: var(--color-surface-secondary); font-size: 12px; }
+.media-preview-controls input { width: 75px; padding: .4rem; border: 1px solid var(--color-border-secondary); }
+.media-feedback { margin: 1rem 2rem; padding: .75rem; border-left: 3px solid var(--color-text-secondary); background: var(--color-surface-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.media-feedback[role="alert"] { border-color: #b31e24; }
+.media-mixer label { display: flex; align-items: center; gap: .5rem; }
+.media-mixer input { width: 90px; }
+.media-stems { font-size: 10px; background: none; border: 0; text-decoration: underline; padding: .3rem 0; cursor: pointer; }
+.connection-panel button:focus-visible, .tab-bar button:focus-visible, .device-media button:focus-visible { outline: 2px solid #296ca8 !important; outline-offset: 3px; }
+.device-media-hero { background: var(--color-surface-secondary); padding: 30px 32px; }
+.device-media-hero > div { border-left: 3px solid var(--color-accent-secondary); padding-left: 18px; }
+.device-media-hero h2 { font-size: 32px; font-weight: 550; letter-spacing: -.05em; text-transform: capitalize; }
+.device-media-hero span { text-transform: uppercase; font-size: 10px; letter-spacing: .12em; }
+.media-primary, .media-export { border-radius: var(--radius-control); min-height: 38px; font: 550 12px var(--font-ui); text-transform: none; }
+.media-primary { background: var(--color-interactive-primary); color: var(--color-text-inverse); border-color: var(--color-interactive-primary); }
+.media-toolbar input, .media-toolbar select, .media-preview-controls input { border-radius: var(--radius-control); font-family: var(--font-ui); color: var(--color-text-primary); }
+.media-toolbar input { min-width: 0; }
+.media-row { min-height: 76px; }
+.media-row:hover { background: var(--color-surface-secondary); }
+.media-row input { accent-color: var(--color-interactive-primary); }
+.media-play { width: 34px; height: 34px; background: var(--color-surface-secondary); color: var(--color-text-primary); }
+.media-play.is-playing { background: var(--color-interactive-primary); color: var(--color-text-inverse); }
+.media-name strong { font-size: 14px; font-weight: 600; }
+.media-name small { margin-top: 5px; }
+.media-stems { color: var(--color-interactive-primary); text-underline-offset: 3px; }
+.media-mixer { border-top: 1px solid var(--color-border-subtle); border-bottom: 1px solid var(--color-border-subtle); background: #e5eee2; }
+.media-feedback { border-radius: 0 var(--radius-control) var(--radius-control) 0; }
+@media(max-width:600px) { .connection-panel { padding: 16px; } .connection-heading { flex-direction: column; gap: 3px; } .connection-controls select { min-width: 0; max-width: 100%; } .device-media-hero { padding: 24px 16px; gap: 14px; flex-wrap: wrap; } .device-media-hero h2 { font-size: 26px; } .media-toolbar { flex-wrap: wrap; } .media-toolbar input { flex-basis: 100%; } .media-preview-controls { padding: 14px 16px; } .device-busy { flex-wrap: wrap; } }
+
+/* Install samples: plan review before any device write. */
+.install-panel .media-toolbar label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--color-text-secondary); }
+.install-target { margin: 0 24px 12px; font-size: 11px; color: var(--color-text-secondary); line-height: 1.7; }
+.install-target code { font-size: 11px; }
+.install-drop { margin: 0 24px 24px; padding: 32px; border: 1px dashed var(--color-border-strong); border-radius: var(--radius-panel); text-align: center; line-height: 1.7; }
+.install-drop.is-dragging { border-color: var(--color-accent); background: var(--color-surface-raised); }
+.install-drop p { margin: 0 0 8px; }
+/* Every list built on `.install-rows` — the install plan, the takes library and the
+   storage space review — puts a name, a size and at most a status in each row, while
+   `.media-row` is a six-column grid built for the device media page's checkbox, play
+   button, name, date, size and export button. Without a template of their own the
+   name landed in the 24px checkbox column and every row read as "m…". The rule is on
+   the container, because fixing it per list left the same defect one tab away twice. */
+.install-rows .media-row { grid-template-columns: minmax(0, 1fr) 90px 128px; }
+.capture-actions { display: flex; gap: 8px; align-items: center; }
+.install-rows { border-top: 1px solid var(--color-border-subtle); }
+.install-row { align-items: start; }
+.install-row .media-name small { display: block; color: var(--color-text-secondary); font-size: 10px; }
+.install-row .install-warning { color: var(--color-status-caution, #79520b); }
+.install-row .install-blocked { color: var(--color-status-danger, #9d261d); }
+.install-status { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-secondary); white-space: nowrap; }
+.install-row.status-sent .install-status { color: var(--color-status-ok, #285f35); }
+.install-row.status-failed .install-status { color: var(--color-status-danger, #9d261d); }
+
+/* Take audition: waveform from cached peaks, bounded playback, marked regions. */
+.take-select { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+.media-row.is-selected { background: var(--color-surface-raised); }
+.take-audition { padding: 20px 24px; border-top: 1px solid var(--color-border-subtle); display: flex; flex-direction: column; gap: 12px; }
+.take-audition:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.take-audition header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.take-audition header small { display: block; color: var(--color-text-secondary); font-size: 11px; }
+.audition-transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.audition-hint { font-size: 10px; color: var(--color-text-tertiary); text-transform: lowercase; }
+.take-audition canvas { width: 100%; height: 140px; background: var(--color-surface-raised); border: 1px solid var(--color-border-subtle); cursor: crosshair; }
+.audition-marks { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 11px; color: var(--color-text-secondary); }
+.audition-marks input[type=number] { width: 9em; }
+.audition-marks label { display: inline-flex; align-items: baseline; gap: 6px; }
+.audition-marks label small { font: 10px var(--font-mono); color: var(--color-text-tertiary); }
+.audition-save { display: flex; gap: 8px; align-items: center; }
+.audition-regions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.audition-regions li { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.audition-regions code { color: var(--color-text-secondary); font-size: 11px; }
+
+/* Transfer history: what went to which instrument. */
+.take-history { padding: 12px 24px 20px; border-top: 1px solid var(--color-border-subtle); font-size: 12px; }
+.take-history summary { cursor: pointer; color: var(--color-text-secondary); }
+.take-history ul { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.take-history li { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+.take-history code, .take-history span { color: var(--color-text-secondary); font-size: 11px; }
+.take-history small { flex-basis: 100%; color: var(--color-status-danger, #9d261d); font-size: 11px; }
+
+/* Tape assembly: four tracks out to a folder, never over USB. */
+.tape-assembly { border-top: 1px solid var(--color-border-subtle); }
+.tape-assembly .install-row.status-blocked .media-name strong { color: var(--color-text-secondary); }
+
+.audition-batch { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 4px; font-size: 12px; }
+.audition-batch span { color: var(--color-text-secondary); }
+.audition-regions li input[type=checkbox] { margin: 0; }
+
+/* Takes list behaves as a listbox: one tab stop, arrows move within it. */
+.take-row { cursor: pointer; }
+.take-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* The take's name doubles as the control that renames it, so it has to look
+   pressable without becoming a button-shaped box in the middle of a header. */
+.take-rename { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.take-rename:hover strong, .take-rename:focus-visible strong { text-decoration: underline; }
+.take-rename-edit { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.take-rename-edit label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--color-text-secondary); }
+.take-rename-edit input { font: inherit; padding: 4px 6px; min-width: 16rem; }
+.take-rename-edit small { flex-basis: 100%; color: var(--color-text-secondary); font-size: 11px; line-height: 1.7; }

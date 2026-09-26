@@ -1,12 +1,16 @@
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import type { AudioMetadata } from '../utils/audioFormats';
+import type { SampleUsageIndex } from '../utils/sampleUsage';
 import { midiNoteToString, parseFilename } from '../utils/audio';
 import type { Notification } from '../components/common/NotificationSystem';
 import { cookieUtils, COOKIE_KEYS } from '../utils/cookies';
 import type { FilenameSeparator } from '../utils/constants';
 import { loadDrumDefaultSettings, loadMultisampleDefaultSettings, loadDrumImportedPreset, loadMultisampleImportedPreset } from '../utils/defaultSettings';
 import { applyZeroCrossingToMarkers } from '../utils/audio';
+import type { DeviceTab, TeDeviceKind } from '../utils/teDevices';
+import { OFFLINE_TABS } from '../utils/teDevices';
+import type { TauriTreeEntry } from '../utils/tauriBridge';
 
 // Define enhanced types for the application state
 export interface DrumSample {
@@ -60,7 +64,7 @@ export interface MultisampleFile {
 
 export interface AppState {
   // Current tab
-  currentTab: 'drum' | 'multisample' | 'feedback' | 'library' | 'donate';
+  currentTab: DeviceTab;
   
   // Drum tool settings
   drumSettings: {
@@ -149,11 +153,32 @@ export interface AppState {
   
   // MIDI note mapping convention
   midiNoteMapping: 'C3' | 'C4';
+
+  // Tauri MTP connection
+  tauriDevice: { manufacturer: string; model: string; serial: string; firmware?: string; kind?: TeDeviceKind; supports_rename?: boolean } | null;
+  tauriTreeEntries?: TauriTreeEntry[];
+  /** Library folders the scan asked for and did not find; empty when everything is present. */
+  tauriMissingRoots?: string[];
+  tauriSamples: import('../utils/tauriBridge').TauriPresetSample[];
+  tauriPresets: import('../utils/tauriBridge').TauriDevicePreset[];
+  tauriStorageInfo: { freeSpace: number; capacity: number } | null;
+  tauriProjects: Array<{ handle: number; name: string; size: number }>;
+  /**
+   * Which projects reference which samples, once the user has asked for the sweep.
+   *
+   * It lives here rather than in the projects panel because that panel is unmounted
+   * whenever another tab is shown — so reading forty projects, pressing ⌘1 to check
+   * something, and coming back meant reading all forty again. `serial` is carried with
+   * it so an index built for one instrument is never shown against another.
+   */
+  /** Optional like its sibling device fields, so a state literal need not name it. */
+  sampleUsage?: (SampleUsageIndex & { serial: string | null }) | null;
+  tauriConnecting: boolean;
 }
 
 // Define enhanced action types
 export type AppAction = 
-  | { type: 'SET_TAB'; payload: 'drum' | 'multisample' | 'feedback' | 'library' | 'donate' }
+  | { type: 'SET_TAB'; payload: DeviceTab }
   | { type: 'SET_DRUM_SAMPLE_RATE'; payload: number }
   | { type: 'SET_DRUM_BIT_DEPTH'; payload: number }
   | { type: 'SET_DRUM_CHANNELS'; payload: number }
@@ -226,7 +251,16 @@ export type AppAction =
   | { type: 'SET_MIDI_NOTE_MAPPING'; payload: 'C3' | 'C4' }
   | { type: 'UPDATE_ALL_MULTI_SAMPLES'; payload: Partial<MultisampleFile> }
   | { type: 'UPDATE_ALL_DRUM_SAMPLES'; payload: Partial<DrumSample> }
-  | { type: 'CLEAR_ALL_DRUM_SAMPLES' };
+  | { type: 'CLEAR_ALL_DRUM_SAMPLES' }
+  | { type: 'SET_TAURI_DEVICE'; payload: AppState['tauriDevice'] }
+  | { type: 'SET_TAURI_SAMPLES'; payload: AppState['tauriSamples'] }
+  | { type: 'SET_TAURI_PRESETS'; payload: AppState['tauriPresets'] }
+  | { type: 'SET_TAURI_CONNECTING'; payload: boolean }
+  | { type: 'SET_TAURI_STORAGE_INFO'; payload: AppState['tauriStorageInfo'] }
+  | { type: 'SET_TAURI_PROJECTS'; payload: AppState['tauriProjects'] }
+  | { type: 'SET_TAURI_TREE_ENTRIES'; payload: AppState['tauriTreeEntries'] }
+  | { type: 'SET_TAURI_MISSING_ROOTS'; payload: string[] }
+  | { type: 'SET_SAMPLE_USAGE'; payload: AppState['sampleUsage'] };
 
 // Initial state for drum samples
 const initialDrumSample: DrumSample = {
@@ -273,13 +307,11 @@ const initialMultisampleFile: MultisampleFile = {
 };
 
 // Function to get initial tab from cookie
-const getInitialTab = (): 'drum' | 'multisample' | 'feedback' | 'library' | 'donate' => {
+const getInitialTab = (): DeviceTab => {
   try {
     const savedTab = cookieUtils.getCookie(COOKIE_KEYS.LAST_TAB);
-    if (savedTab === 'multisample') return 'multisample';
-    if (savedTab === 'feedback') return 'feedback';
-    if (savedTab === 'library') return 'library';
-    if (savedTab === 'donate') return 'donate';
+    if (savedTab && OFFLINE_TABS.includes(savedTab as DeviceTab)) return savedTab as DeviceTab;
+    if (savedTab === 'device') return 'library'; // device tab removed, redirect to library
     return 'drum';
   } catch (error) {
     console.warn('Failed to load saved tab from cookie, defaulting to drum tab:', error);
@@ -325,7 +357,16 @@ const initialState: AppState = {
   importedMultisamplePreset: loadMultisampleImportedPreset(),
   isSessionRestorationModalOpen: false,
   sessionInfo: null,
-  midiNoteMapping: getInitialMidiMapping()
+  midiNoteMapping: getInitialMidiMapping(),
+  tauriDevice: null,
+  tauriTreeEntries: [],
+  tauriMissingRoots: [],
+  tauriPresets: [],
+  tauriSamples: [],
+  tauriStorageInfo: null,
+  tauriProjects: [],
+  sampleUsage: null,
+  tauriConnecting: false
 };
 
 // Enhanced reducer function
@@ -700,8 +741,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         );
         finalInPoint = result.inPoint;
         finalOutPoint = result.outPoint;
-        finalLoopStart = result.loopStart || initialLoopStart;
-        finalLoopEnd = result.loopEnd || initialLoopEnd;
+        // `??`, not `||`: a snapped loop point of 0 is a real result — the loop starts at
+        // the beginning of the sample, or the nearest zero crossing is frame 0 — and `||`
+        // discarded it, silently reverting to the un-snapped value. The audible symptom is a
+        // click at the loop point, which is the one thing this snapping exists to prevent.
+        finalLoopStart = result.loopStart ?? initialLoopStart;
+        finalLoopEnd = result.loopEnd ?? initialLoopEnd;
         
 
       }
@@ -1146,8 +1191,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         );
         finalInPoint = result.inPoint;
         finalOutPoint = result.outPoint;
-        finalLoopStart = result.loopStart || initialLoopStart;
-        finalLoopEnd = result.loopEnd || initialLoopEnd;
+        // `??`, not `||`: a snapped loop point of 0 is a real result — the loop starts at
+        // the beginning of the sample, or the nearest zero crossing is frame 0 — and `||`
+        // discarded it, silently reverting to the un-snapped value. The audible symptom is a
+        // click at the loop point, which is the one thing this snapping exists to prevent.
+        finalLoopStart = result.loopStart ?? initialLoopStart;
+        finalLoopEnd = result.loopEnd ?? initialLoopEnd;
         
 
       }
@@ -1354,6 +1403,32 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }),
       };
     }
+
+    case 'SET_TAURI_DEVICE':
+      return { ...state, tauriDevice: action.payload };
+
+    case 'SET_TAURI_SAMPLES':
+      return { ...state, tauriSamples: action.payload };
+
+    case 'SET_TAURI_PRESETS':
+      return { ...state, tauriPresets: action.payload };
+
+    case 'SET_TAURI_CONNECTING':
+      return { ...state, tauriConnecting: action.payload };
+
+    case 'SET_TAURI_STORAGE_INFO':
+      return { ...state, tauriStorageInfo: action.payload };
+
+    case 'SET_TAURI_PROJECTS':
+      // A rescan can have found different projects, so an index built from the previous
+      // list is no longer a complete answer about this device.
+      return { ...state, tauriProjects: action.payload, sampleUsage: null };
+    case 'SET_SAMPLE_USAGE':
+      return { ...state, sampleUsage: action.payload };
+    case 'SET_TAURI_MISSING_ROOTS':
+      return { ...state, tauriMissingRoots: action.payload };
+    case 'SET_TAURI_TREE_ENTRIES':
+      return { ...state, tauriTreeEntries: action.payload };
 
     default: {
       return state;

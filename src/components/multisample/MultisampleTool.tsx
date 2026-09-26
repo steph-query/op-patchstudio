@@ -6,6 +6,7 @@ import { AudioProcessingSection } from '../common/AudioProcessingSection';
 import { GeneratePresetSection } from '../common/GeneratePresetSection';
 import { ErrorDisplay } from '../common/ErrorDisplay';
 import { MultisampleSampleTable } from './MultisampleSampleTable';
+import { describePitchNameMismatches, findPitchNameMismatches } from '../../utils/pitchNaming';
 import { MultisamplePresetSettings } from './MultisamplePresetSettings';
 import { VirtualMidiKeyboard } from './VirtualMidiKeyboard';
 import { useFileUpload } from '../../hooks/useFileUpload';
@@ -18,12 +19,19 @@ import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { ToggleSwitch } from '../common/ToggleSwitch';
 import { saveMultisampleSettingsAsDefault } from '../../utils/defaultSettings';
 import { AUDIO_CONSTANTS } from '../../utils/constants';
+import { isTauriAvailable } from '../../utils/tauriBridge';
+import { detectDeviceKind } from '../../utils/teDevices';
+import { useConfirmedSend } from '../../hooks/useConfirmedSend';
+import { SendReview } from '../common/SendReview';
+import { generateMultisamplePatch } from '../../utils/patchGeneration';
+import JSZip from 'jszip';
 
 
 export function MultisampleTool() {
   const { state, dispatch } = useAppContext();
   const { handleMultisampleUpload, clearMultisampleFile } = useFileUpload();
   const { generateMultisamplePatchFile } = usePatchGeneration();
+  const send = useConfirmedSend();
   const { playWithADSR, releaseNote } = useAudioPlayer();
   const audioFileInputRef = useRef<HTMLInputElement>(null);
   const browseFilesRef = useRef<(() => void) | null>(null);
@@ -255,16 +263,53 @@ export function MultisampleTool() {
     }
   };
 
+  // One reviewed confirmation, then a verified write recorded in transfer history.
+  const handleSendToDevice = () => {
+    const patchName = state.multisampleSettings.presetName.trim() || 'multisample_patch';
+    send.request(async () => {
+      const patchBlob = await generateMultisamplePatch(
+        state,
+        patchName,
+        state.multisampleSettings.sampleRate || undefined,
+        state.multisampleSettings.bitDepth || undefined,
+        state.multisampleSettings.channels === 1 ? 'mono' : 'keep',
+        state.multisampleSettings.gain || 0,
+        state.multisampleSettings.audioFormat,
+      );
+      const zip = await JSZip.loadAsync(patchBlob);
+      const files: Array<{ name: string; data: Uint8Array }> = [];
+      for (const [name, file] of Object.entries(zip.files)) {
+        if (file.dir) continue;
+        files.push({ name, data: await file.async('uint8array') });
+      }
+      const rate = state.multisampleSettings.sampleRate ? `${(state.multisampleSettings.sampleRate / 1000).toFixed(1)} khz` : 'source rate';
+      const depth = state.multisampleSettings.bitDepth ? `${state.multisampleSettings.bitDepth}-bit` : 'source depth';
+      return {
+        name: patchName,
+        category: 'keys',
+        files,
+        format: `${rate} · ${depth} · ${state.multisampleSettings.channels === 1 ? 'mono' : 'stereo kept'} · .${state.multisampleSettings.audioFormat} · ${state.multisampleFiles.length} ${state.multisampleFiles.length === 1 ? 'zone' : 'zones'}`,
+      };
+    });
+  };
+
+
   const handleSaveSettingsAsDefault = () => {
     try {
-      saveMultisampleSettingsAsDefault(state.multisampleSettings, state.importedMultisamplePreset);
+      // Report what happened rather than assuming. These settings are stored in a
+      // cookie, which the browser discards without error past about 4 KB — and they
+      // carry the imported preset, which is the large part. Saying "saved as default"
+      // for something that did not save is worse than saying nothing.
+      const saved = saveMultisampleSettingsAsDefault(state.multisampleSettings, state.importedMultisamplePreset);
       dispatch({
         type: 'ADD_NOTIFICATION',
         payload: {
           id: Date.now().toString(),
-          type: 'success',
-          title: 'settings saved',
-          message: 'multisample settings saved as default'
+          type: saved ? 'success' : 'error',
+          title: saved ? 'settings saved' : 'settings not saved',
+          message: saved
+            ? 'multisample settings saved as default'
+            : 'These settings are too large to store — an imported preset is usually the reason. Clear the imported preset and save again, or keep using them for this session only.'
         }
       });
     } catch (error) {
@@ -468,6 +513,14 @@ export function MultisampleTool() {
   }, [state.multisampleFiles.length, handleMultisampleUpload]);
 
   const hasLoadedSamples = state.multisampleFiles.length > 0;
+
+  // The device falls back to the note in a filename, so disagreement with the root note mis-tunes a zone.
+  const pitchWarning = describePitchNameMismatches(findPitchNameMismatches(
+    state.multisampleFiles
+      .filter(file => file.isLoaded && file.file)
+      .map(file => ({ name: file.file?.name ?? file.name, rootNote: file.rootNote })),
+    state.midiNoteMapping,
+  ));
   const hasPresetName = state.multisampleSettings.presetName.trim().length > 0;
   const canGeneratePatch = hasLoadedSamples && hasPresetName;
   
@@ -488,7 +541,7 @@ export function MultisampleTool() {
 
   return (
     <div style={{ 
-      fontFamily: '"Montserrat", "Arial", sans-serif',
+      fontFamily: 'var(--font-ui)',
       display: 'flex',
       flexDirection: 'column',
       height: '100%'
@@ -500,7 +553,7 @@ export function MultisampleTool() {
       <input
         ref={audioFileInputRef}
         type="file"
-        accept="audio/*,.wav"
+        accept=".wav,.aif,.aiff,audio/*"
         onChange={handleAudioFileImport}
         style={{ display: 'none' }}
       />
@@ -558,7 +611,7 @@ export function MultisampleTool() {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
               <h3 style={{
                 margin: 0,
-                color: '#222',
+                color: 'var(--color-text-primary)',
                 fontSize: '1.25rem',
                 fontWeight: 300,
                 textTransform: 'lowercase',
@@ -586,6 +639,18 @@ export function MultisampleTool() {
           <div style={{ 
             padding: 0,
           }}>
+            {pitchWarning && (
+              <p role="status" style={{
+                margin: 0,
+                padding: '0.6rem 1rem',
+                borderBottom: '1px solid var(--color-border-medium)',
+                fontSize: '0.75rem',
+                lineHeight: 1.7,
+                color: 'var(--color-text-secondary)',
+              }}>
+                {pitchWarning}
+              </p>
+            )}
             <MultisampleSampleTable 
               onFileUpload={handleFileUpload}
               onClearSample={handleClearSample}
@@ -786,6 +851,8 @@ export function MultisampleTool() {
           onFilenameSeparatorChange={(separator) => dispatch({ type: 'SET_MULTISAMPLE_FILENAME_SEPARATOR', payload: separator })}
           audioFormat={state.multisampleSettings.audioFormat}
           onAudioFormatChange={(format) => dispatch({ type: 'SET_MULTISAMPLE_AUDIO_FORMAT', payload: format })}
+          onSendToDevice={isTauriAvailable() && (!state.tauriDevice || detectDeviceKind(state.tauriDevice.model) === 'op-xy') ? handleSendToDevice : undefined}
+          isDeviceConnected={!!state.tauriDevice && detectDeviceKind(state.tauriDevice.model) === 'op-xy'}
         />
       </div>
 
@@ -805,7 +872,8 @@ export function MultisampleTool() {
         maxDuration={20}
       />
 
-
+      <SendReview pending={send.pending} sending={send.sending} onConfirm={() => void send.confirm()} onCancel={send.cancel}
+        reconciliation={send.reconciliation} checking={send.checking} onCheck={() => void send.check()} onComplete={() => void send.complete()} />
     </div>
   );
 }

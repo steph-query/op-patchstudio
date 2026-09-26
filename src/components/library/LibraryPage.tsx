@@ -8,7 +8,7 @@ import { useAppContext } from '../../context/AppContext';
 import { indexedDB, STORES } from '../../utils/indexedDB';
 import { generateDrumPatch, generateMultisamplePatch, downloadBlob } from '../../utils/patchGeneration';
 import type { LibraryPreset } from '../../utils/libraryUtils';
-import { blobToAudioBuffer } from '../../utils/libraryUtils';
+import { audioBytesToBuffer, audioBytesToFile, restoredLoopPoints } from '../../utils/libraryUtils';
 import { sessionStorageIndexedDB } from '../../utils/sessionStorageIndexedDB';
 import { AUDIO_CONSTANTS } from '../../utils/constants';
 
@@ -65,8 +65,9 @@ async function restoreDrumSamples(drumSamples: any[], audioContext: AudioContext
   for (const sample of drumSamples) {
     if (sample && sample.audioBlob && typeof sample.originalIndex === 'number') {
       try {
-        const audioBuffer = await blobToAudioBuffer(sample.audioBlob, audioContext);
-        const { audioBlob, originalIndex, ...rest } = sample;
+        const audioBuffer = await audioBytesToBuffer(sample.audioBlob, audioContext);
+        // Same idiom as `restoreMultisampleFiles` below, for the same reason.
+        const { audioBlob: _audioBlob, originalIndex, ...rest } = sample;
         
         // Validate metadata
         if (!rest.metadata || typeof rest.metadata.duration !== 'number') {
@@ -78,7 +79,7 @@ async function restoreDrumSamples(drumSamples: any[], audioContext: AudioContext
           ...rest,
           audioBuffer,
           originalIndex,
-          file: new File([sample.audioBlob], sample.name, { type: 'audio/wav' }),
+          file: audioBytesToFile(sample.audioBlob, sample.name),
           isAssigned: true,
           assignedKey: sample.originalIndex
         });
@@ -96,8 +97,14 @@ async function restoreMultisampleFiles(multisampleFiles: any[], audioContext: Au
   return Promise.all(multisampleFiles.map(async (file) => {
     if (file && file.audioBlob) {
       try {
-        const audioBuffer = await blobToAudioBuffer(file.audioBlob, audioContext);
-        const { audioBlob, ...rest } = file;
+        const audioBuffer = await audioBytesToBuffer(file.audioBlob, audioContext);
+        // Not `omit(file, 'audioBlob')`: this parameter is typed `any[]`, and
+        // `Omit<any, K>` resolves to a bare index-signature object that is no longer
+        // assignable to `MultisampleFile`. Destructuring `any` stays `any`, so the two
+        // forms behave identically at runtime and only one type-checks. The real problem
+        // is the `any[]` — while it stands, neither form proves the restored files carry
+        // the fields the patch generator reads.
+        const { audioBlob: _audioBlob, ...rest } = file;
         
         // Validate metadata
         if (!rest.metadata || typeof rest.metadata.duration !== 'number') {
@@ -108,7 +115,7 @@ async function restoreMultisampleFiles(multisampleFiles: any[], audioContext: Au
         return {
           ...rest,
           audioBuffer,
-          file: new File([file.audioBlob], file.name, { type: 'audio/wav' })
+          file: audioBytesToFile(file.audioBlob, file.name)
         };
       } catch (error) {
         console.error('Failed to restore audio buffer for multisample file:', file.name, error);
@@ -118,6 +125,17 @@ async function restoreMultisampleFiles(multisampleFiles: any[], audioContext: Au
     return null;
   })).then(files => files.filter(file => file !== null));
 }
+
+/**
+ * Compare names the way a person reads them.
+ *
+ * Almost everything in this app is numbered — "long take 01", "Preset 12", "kick 2.wav" —
+ * and a plain `localeCompare` sorts those as "Preset 1, Preset 10, Preset 11, … Preset 2",
+ * which looks like the list is broken. `numeric` collation reads the digits as numbers, so
+ * they come out 1, 2, 3 … 10, 11.
+ */
+const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
 
 export function LibraryPage() {
   const { state, dispatch } = useAppContext();
@@ -255,7 +273,7 @@ export function LibraryPage() {
       let comparison = 0;
       switch (sortBy) {
         case 'name':
-          comparison = a.name.localeCompare(b.name);
+          comparison = byName(a.name, b.name);
           break;
         case 'date':
           comparison = a.updatedAt - b.updatedAt;
@@ -263,6 +281,20 @@ export function LibraryPage() {
         case 'type':
           comparison = a.type.localeCompare(b.type);
           break;
+      }
+      // Break ties by name, always ascending.
+      //
+      // Sorting by type puts every drum kit together and every multisample together, and
+      // said nothing about the order *within* a group — `localeCompare` returns 0, the sort
+      // is stable, and the result was therefore whatever order the list happened to arrive
+      // in. That is unstable in practice: the same library could present two kits in either
+      // order between renders. Sorting by date has the same tie whenever two presets share a
+      // timestamp, which a batch import makes likely.
+      //
+      // The tie-break is deliberately not reversed with `sortOrder`: reversing it would make
+      // the secondary order flip with the primary, which reads as the list shuffling itself.
+      if (comparison === 0 && sortBy !== 'name') {
+        return byName(a.name, b.name);
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
@@ -445,8 +477,7 @@ export function LibraryPage() {
               fileSize: file.metadata.fileSize,
               midiNote: file.rootNote, // Use the stored rootNote as midiNote
               hasLoopData: true, // We always have loop data since we set defaults
-              loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
-              loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
+              ...restoredLoopPoints(file, file.audioBuffer.duration),
               format: 'PCM',
               dataLength: file.metadata.fileSize || 0
             };
@@ -465,10 +496,11 @@ export function LibraryPage() {
             pendingUpdatesRef.current.push({
               file: file,
               updates: {
-                inPoint: file.inPoint || 0,
-                outPoint: file.outPoint || file.audioBuffer.duration,
-                loopStart: file.loopStart || file.audioBuffer.duration * 0.2,
-                loopEnd: file.loopEnd || file.audioBuffer.duration * 0.8,
+                // `??` throughout: an in point of 0 and a loop start of 0 are ordinary
+                // values, not missing ones.
+                inPoint: file.inPoint ?? 0,
+                outPoint: file.outPoint ?? file.audioBuffer.duration,
+                ...restoredLoopPoints(file, file.audioBuffer.duration),
               }
             });
             
@@ -650,7 +682,7 @@ export function LibraryPage() {
             id: Date.now().toString(),
             type: 'success',
             title: 'presets deleted',
-            message: `deleted ${presetIds.length} presets`
+            message: `deleted ${presetIds.length} ${presetIds.length === 1 ? 'preset' : 'presets'}`
           }
         });
       } else if (presetToDelete) {
