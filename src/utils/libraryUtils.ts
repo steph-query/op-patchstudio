@@ -27,7 +27,37 @@ export async function blobToAudioBuffer(blob: Blob, audioContext: AudioContext):
   }
 }
 
-// --- Strip AudioBuffer and replace with Blob for storage (preserving drum sample indexes) ---
+/**
+ * The stored audio, as bytes rather than a Blob.
+ *
+ * Some WebKit builds refuse a Blob or a File in IndexedDB outright — saving a
+ * preset failed with "Error preparing Blob/File data to be stored in object
+ * store" — while accepting an ArrayBuffer without complaint. Presets saved by
+ * earlier versions hold Blobs, so reads accept either; see `audioBytesToBuffer`.
+ */
+async function audioBufferToWavBytes(audioBuffer: AudioBuffer): Promise<ArrayBuffer> {
+  return (await audioBufferToWavBlob(audioBuffer)).arrayBuffer();
+}
+
+/** Read stored audio written in either shape. */
+export async function audioBytesToBuffer(stored: ArrayBuffer | Blob, audioContext: AudioContext): Promise<AudioBuffer> {
+  const bytes = stored instanceof Blob ? await stored.arrayBuffer() : stored;
+  return audioContext.decodeAudioData(bytes.slice(0));
+}
+
+/** A copy without the given keys, so nothing has to be destructured into an unused name. */
+function omit<T extends object, K extends keyof T>(value: T, ...keys: K[]): Omit<T, K> {
+  const copy = { ...value };
+  for (const key of keys) delete copy[key];
+  return copy;
+}
+
+/** A File for the builders, from either shape. */
+export function audioBytesToFile(stored: ArrayBuffer | Blob, name: string): File {
+  return new File([stored], name, { type: 'audio/wav' });
+}
+
+// --- Strip AudioBuffer and replace with stored bytes (preserving drum sample indexes) ---
 async function prepareDrumSamplesForStorage(drumSamples: AppState['drumSamples']): Promise<any[]> {
   if (!Array.isArray(drumSamples)) {
     return [];
@@ -38,8 +68,11 @@ async function prepareDrumSamplesForStorage(drumSamples: AppState['drumSamples']
     const sample = drumSamples[index];
     
     if (sample && sample.isLoaded && sample.audioBuffer) {
-      const audioBlob = await audioBufferToWavBlob(sample.audioBuffer);
-      const { audioBuffer, ...rest } = sample;
+      const audioBlob = await audioBufferToWavBytes(sample.audioBuffer);
+      // `file` goes as well as `audioBuffer`: a File cannot be stored in IndexedDB on
+      // some WebKit builds, and it is redundant — the bytes are in `audioBlob` and the
+      // name is kept alongside, so the reader rebuilds it.
+      const rest = omit(sample, 'audioBuffer', 'file');
       preparedSamples.push({
         ...rest,
         audioBlob,
@@ -58,7 +91,7 @@ async function prepareDrumSamplesForStorage(drumSamples: AppState['drumSamples']
   return preparedSamples;
 }
 
-// --- Strip AudioBuffer and replace with Blob for multisample files ---
+// --- Strip AudioBuffer and replace with stored bytes for multisample files ---
 async function prepareMultisampleFilesForStorage(multisampleFiles: AppState['multisampleFiles']): Promise<any[]> {
   if (!Array.isArray(multisampleFiles)) {
     return [];
@@ -66,8 +99,8 @@ async function prepareMultisampleFilesForStorage(multisampleFiles: AppState['mul
   
   return Promise.all(multisampleFiles.map(async (file) => {
     if (file && file.isLoaded && file.audioBuffer) {
-      const audioBlob = await audioBufferToWavBlob(file.audioBuffer);
-      const { audioBuffer, ...rest } = file;
+      const audioBlob = await audioBufferToWavBytes(file.audioBuffer);
+      const rest = omit(file, 'audioBuffer', 'file');
       return {
         ...rest,
         audioBlob,
@@ -188,4 +221,21 @@ export async function resetAllSettings(
       error: 'failed to reset settings'
     };
   }
-} 
+}
+
+/**
+ * The loop points a restored zone should use.
+ *
+ * These were four inline `||` expressions across two call sites, and `||` treats **0 as
+ * absent**. A saved `loopStart` of 0 is entirely ordinary — it is the natural value for a
+ * loop that begins at the start of the sample, and it is what `patchGeneration` itself
+ * writes — so loading such a preset from the library silently moved its loop start to 20%
+ * into the sample. `??` substitutes only when the value is genuinely missing, which is what
+ * "use the stored value if there is one" means.
+ */
+export function restoredLoopPoints(file: { loopStart?: number; loopEnd?: number }, duration: number) {
+  return {
+    loopStart: file.loopStart ?? duration * 0.2,
+    loopEnd: file.loopEnd ?? duration * 0.8,
+  };
+}

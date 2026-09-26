@@ -1,6 +1,7 @@
 import type { AppState } from '../context/AppContext';
 
 // Database configuration
+// Preserve the installed web app's data across the product rename.
 const DB_NAME = 'op-patchstudio-db';
 const DB_VERSION = 1;
 
@@ -57,7 +58,15 @@ export interface SampleData {
   name: string;
   type: string;
   size: number;
-  data: Blob; // Raw audio data as Blob to avoid detached ArrayBuffer issues
+  /**
+   * Raw bytes. Written as an ArrayBuffer, and read as either that or a Blob:
+   * sessions saved by earlier versions hold Blobs, and some WebKit builds refuse
+   * to store a Blob in IndexedDB at all — the session then fails to save with
+   * "Error preparing Blob/File data to be stored in object store".
+   */
+  data: ArrayBuffer | Blob;
+  /** How `data` should be read. Absent in sessions written before this field existed. */
+  encoding?: 'audio-bytes' | 'audio-buffer-json';
   metadata: {
     sampleRate: number;
     bitDepth: number;
@@ -81,6 +90,26 @@ export interface PresetData {
   tags?: string[];
   description?: string;
   sampleCount?: number; // Number of samples in the preset
+}
+
+/**
+ * Turn the engine's own wording into something a person can act on.
+ *
+ * Some WebKit builds — the family Tauri renders in on macOS — refuse a Blob or a
+ * File in IndexedDB and fail with "Error preparing Blob/File data to be stored in
+ * object store". Nothing this app stores holds one any more, so if that surfaces
+ * again it means a record has regained one, and the message should say so rather
+ * than leave the next reader guessing at the engine.
+ */
+export function describeStoreError(error: DOMException | null, storeName: string): Error {
+const message = error?.message ?? 'Unknown storage error';
+if (/blob|file/i.test(message)) {
+  return new Error(
+    `Could not save to ${storeName}: this browser will not store a Blob or File in its database. ` +
+    'Store the bytes instead (see audioBytesToFile in libraryUtils). Original error: ' + message,
+  );
+}
+return new Error(`Could not save to ${storeName}: ${message}`);
 }
 
 class IndexedDBManager {
@@ -156,6 +185,7 @@ class IndexedDBManager {
   }
 
   // Generic CRUD operations
+
   async add<T>(storeName: string, data: T): Promise<void> {
     await this.ensureInit();
     return new Promise((resolve, reject) => {
@@ -164,7 +194,7 @@ class IndexedDBManager {
       const request = store.add(data);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(describeStoreError(request.error, storeName));
     });
   }
 
@@ -188,7 +218,7 @@ class IndexedDBManager {
       const request = store.put(data);
 
       request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onerror = () => reject(describeStoreError(request.error, storeName));
     });
   }
 
@@ -318,7 +348,8 @@ class IndexedDBManager {
     
     // Add sample sizes
     samples.forEach(sample => {
-      totalSize += sample.data.size;
+      // Either shape reports its length differently.
+      totalSize += sample.data instanceof Blob ? sample.data.size : sample.data.byteLength;
       totalSize += JSON.stringify(sample.metadata).length;
     });
     
@@ -327,4 +358,4 @@ class IndexedDBManager {
 }
 
 // Export singleton instance
-export const indexedDB = IndexedDBManager.getInstance(); 
+export const indexedDB = IndexedDBManager.getInstance();

@@ -327,4 +327,4 @@ export class SessionStorageManager {
   }
 }
 
-export const sessionStorage = SessionStorageManager.getInstance(); 
+export const sessionStorage = SessionStorageManager.getInstance();

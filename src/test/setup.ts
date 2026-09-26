@@ -169,37 +169,65 @@ if (origCreateGain) {
     return gainNode;
   };
 }
-// Patch canvas context for setLineDash and basic 2D methods
+/**
+ * jsdom's 2D context is a stub, so anything that draws needs one supplied here.
+ *
+ * This used to be a hand-written list of methods with "add any other needed 2d
+ * context methods here" at the bottom. The failure mode was nasty: adding one
+ * drawing call to a component crashed a test file that never mentioned canvas,
+ * with `ctx.closePath is not a function` from inside a mount effect. Answer any
+ * method instead of enumerating them, so the list can never fall behind.
+ */
 try {
   const origGetContext = HTMLCanvasElement.prototype.getContext;
-  HTMLCanvasElement.prototype.getContext = function (...args) {
+  HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: [string, unknown?]) {
     if (args[0] === '2d') {
-      // Return a persistent mock object for each canvas
-      const ctx = {
-        setLineDash: vi.fn(),
-        beginPath: vi.fn(),
-        moveTo: vi.fn(),
-        lineTo: vi.fn(),
-        stroke: vi.fn(),
-        arc: vi.fn(),
-        fill: vi.fn(),
-        clearRect: vi.fn(),
-        fillRect: vi.fn(),
-        strokeRect: vi.fn(),
-        drawImage: vi.fn(),
-        save: vi.fn(),
-        restore: vi.fn(),
-        translate: vi.fn(),
-        scale: vi.fn(),
-        rotate: vi.fn(),
-        // Add any other needed 2d context methods here
-      };
-      return ctx as any;
+      // Assigned properties (fillStyle, lineWidth, font…) read back as they were set.
+      const assigned: Record<string | symbol, unknown> = {};
+      // One spy per method name, so `expect(ctx.fillRect).toHaveBeenCalled()` still works.
+      const methods = new Map<string | symbol, ReturnType<typeof vi.fn>>();
+      const ctx = new Proxy(assigned, {
+        get(target, prop) {
+          if (prop in target) return target[prop];
+          if (!methods.has(prop)) {
+            // Covers what canvas methods actually return: gradients and patterns
+            // (addColorStop), measureText (width), getImageData (data).
+            methods.set(prop, vi.fn(() => ({
+              addColorStop: vi.fn(),
+              width: 0,
+              height: 0,
+              data: new Uint8ClampedArray(4),
+            })));
+          }
+          return methods.get(prop);
+        },
+        set(target, prop, value) {
+          target[prop] = value;
+          return true;
+        },
+        has: () => true,
+      });
+      return ctx as unknown as CanvasRenderingContext2D;
     }
     return origGetContext ? origGetContext.apply(this, args) : null;
-  };
+    // Cast the whole assignment: `getContext` is overloaded per context id, and a
+    // single implementation signature cannot satisfy all four overloads.
+  } as typeof HTMLCanvasElement.prototype.getContext;
 } catch (e) {
   // If we can't mock, ignore and let tests skip or fail gracefully
+}
+
+// jsdom 25 omits Blob.arrayBuffer, which real browsers and the Tauri webview provide.
+// Back it with FileReader so tests can exercise the same file-reading code paths as the app.
+if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
+  Blob.prototype.arrayBuffer = function arrayBuffer(this: Blob): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this);
+    });
+  };
 }
 
 // Export mock utilities for tests

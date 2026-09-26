@@ -434,7 +434,13 @@ describe('Drum Sample Index Preservation', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3' as const
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
 
     // Set up the mock to return the expected preset data
@@ -574,7 +580,13 @@ describe('Drum Sample Index Preservation', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3' as const
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
 
     // Set up the mock to return the expected empty preset data
@@ -694,7 +706,13 @@ describe('Multisample Loop Points Preservation', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3' as const
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
 
     // Set up the mock to return the expected multisample preset data
@@ -782,4 +800,70 @@ describe('Multisample Loop Points Preservation', () => {
 
     console.log('✅ Multisample loop points preservation test passed');
   });
-}); 
+});
+
+/**
+ * What a saved multisample preset must still contain when it comes back.
+ *
+ * `restoreMultisampleFiles` in `LibraryPage` takes `any[]` and spreads the stored record
+ * back out, so **TypeScript checks nothing across this boundary** — the fields the patch
+ * generator reads could go missing from the stored shape and nothing would complain until
+ * a downloaded preset came out wrong. Reading the code says the fields survive; that is
+ * not the same as knowing, so this asserts it.
+ *
+ * The list is taken from `generateMultisamplePatch`, which reads exactly these per file:
+ * `audioBuffer`, `rootNote`, `inPoint`, `outPoint`, `loopStart` and `loopEnd`.
+ * `audioBuffer` is deliberately absent from storage — it is rebuilt from `audioBlob` on
+ * the way back — so the other five are what has to be preserved.
+ */
+describe('a saved multisample preset survives the round trip', () => {
+  /** Every field `generateMultisamplePatch` reads, other than the rebuilt audio. */
+  const REQUIRED = ['rootNote', 'inPoint', 'outPoint', 'loopStart', 'loopEnd'] as const;
+
+  it('stores every field the patch generator reads', async () => {
+    vi.mocked(sessionStorageIndexedDB.markSessionAsSavedToLibrary).mockResolvedValue(undefined);
+    const { savePresetToLibrary } = await import('../../utils/libraryUtils');
+    const { indexedDB, STORES } = await import('../../utils/indexedDB');
+    const addSpy = vi.spyOn(indexedDB, 'add');
+
+    const file = {
+      file: new File([new Uint8Array([1, 2, 3])], 'pad.wav'),
+      audioBuffer: { duration: 2, length: 88_200, sampleRate: 44_100, numberOfChannels: 1, getChannelData: () => new Float32Array(1) } as unknown as AudioBuffer,
+      name: 'pad.wav',
+      isLoaded: true,
+      rootNote: 60,
+      inPoint: 1_000,
+      outPoint: 80_000,
+      loopStart: 2_000,
+      loopEnd: 70_000,
+      originalBitDepth: 24,
+      originalSampleRate: 48_000,
+      originalChannels: 2,
+      fileSize: 3,
+      duration: 2,
+    };
+    const state = { ...mockAppState, multisampleFiles: [file] } as unknown as AppState;
+
+    expect((await savePresetToLibrary(state, 'Round Trip', 'multisample')).success).toBe(true);
+    const stored = addSpy.mock.calls.find(call => call[0] === STORES.PRESETS)?.[1] as { data: { multisampleFiles: Array<Record<string, unknown>> } };
+    const saved = stored.data.multisampleFiles[0];
+
+    for (const field of REQUIRED) {
+      expect(saved, `${field} is read by generateMultisamplePatch and must survive storage`).toHaveProperty(field);
+      expect(saved[field], `${field} must keep its value, not merely exist`).toBe(file[field]);
+    }
+    // The audio itself is stored as bytes and rebuilt, so the buffer must not be kept.
+    expect(saved).not.toHaveProperty('audioBuffer');
+    expect(saved).toHaveProperty('audioBlob');
+  });
+
+  it('names the fields it checks after the generator, so the list cannot drift', async () => {
+    // If `generateMultisamplePatch` starts reading another field, REQUIRED must grow with
+    // it — otherwise this test keeps passing while the new field silently goes missing.
+    const generator = (await import('node:fs')).readFileSync('src/utils/patchGeneration.ts', 'utf8');
+    const body = generator.slice(generator.indexOf('export async function generateMultisamplePatch'));
+    const read = new Set([...body.matchAll(/\b(?:file|sample)\.(\w+)/g)].map(match => match[1]));
+    const interesting = [...read].filter(name => /^(rootNote|inPoint|outPoint|loopStart|loopEnd)$/.test(name));
+    expect(interesting.sort()).toEqual([...REQUIRED].sort());
+  });
+});

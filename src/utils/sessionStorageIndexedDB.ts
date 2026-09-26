@@ -36,16 +36,17 @@ export class SessionStorageManagerIndexedDB {
         const sampleId = `drum-${i}-${timestamp}`;
         drumSampleIds[i] = sampleId;
         
-        // Convert File to Blob to avoid detached ArrayBuffer issues
+        // The bytes themselves: a Blob here is refused outright by some WebKit
+        // builds, and we already hold the ArrayBuffer.
         const arrayBuffer = await sample.file.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: sample.file.type });
-        
+
         const sampleData: SampleData = {
           id: sampleId,
           name: sample.file.name,
           type: sample.file.type,
           size: sample.file.size,
-          data: blob,
+          data: arrayBuffer,
+          encoding: 'audio-bytes',
           metadata: {
             sampleRate: sample.audioBuffer.sampleRate,
             bitDepth: sample.originalBitDepth || 16,
@@ -83,13 +84,14 @@ export class SessionStorageManagerIndexedDB {
           name: file.file.name,
           type: file.file.type,
           size: file.file.size,
-          data: new Blob([JSON.stringify({
+          data: new TextEncoder().encode(JSON.stringify({
             sampleRate: audioBuffer.sampleRate,
             numberOfChannels: audioBuffer.numberOfChannels,
             length: audioBuffer.length,
             duration: audioBuffer.duration,
             channelData: channelData.map(channel => Array.from(channel)) // Convert to regular array for JSON serialization
-          })], { type: 'application/json' }),
+          })).buffer as ArrayBuffer,
+          encoding: 'audio-buffer-json',
           metadata: {
             sampleRate: audioBuffer.sampleRate,
             bitDepth: file.originalBitDepth || 16,
@@ -357,7 +359,9 @@ export class SessionStorageManagerIndexedDB {
             try {
               const file = new File([sampleData.data], sampleData.name, { type: sampleData.type });
               await file.arrayBuffer(); // This will throw if the data is corrupted
-            } catch (error) {
+            } catch (_error) {
+              // The reason does not help: a sample whose bytes will not read is unusable
+              // however it failed, and it is recorded as corrupted either way.
               corruptedSampleIds.push(storedSample.sampleId);
             }
           }
@@ -377,7 +381,7 @@ export class SessionStorageManagerIndexedDB {
             try {
               const file = new File([sampleData.data], sampleData.name, { type: sampleData.type });
               await file.arrayBuffer(); // This will throw if the data is corrupted
-            } catch (error) {
+            } catch (_error) {
               corruptedSampleIds.push(storedFile.sampleId);
             }
           }
@@ -442,9 +446,16 @@ export class SessionStorageManagerIndexedDB {
       let audioBuffer: AudioBuffer;
       let file: File;
 
-      if (sampleData.data.type === 'application/json') {
+      // Sessions written before `encoding` existed hold a Blob whose type says which
+      // of the two shapes it is.
+      const storedBytes = sampleData.data instanceof Blob ? await sampleData.data.arrayBuffer() : sampleData.data;
+      const isAudioBufferJson = sampleData.encoding
+        ? sampleData.encoding === 'audio-buffer-json'
+        : sampleData.data instanceof Blob && sampleData.data.type === 'application/json';
+
+      if (isAudioBufferJson) {
         // Load from stored AudioBuffer data
-        const arrayBuffer = await sampleData.data.arrayBuffer();
+        const arrayBuffer = storedBytes;
         const text = new TextDecoder().decode(arrayBuffer);
         const audioData = JSON.parse(text);
         
@@ -467,8 +478,8 @@ export class SessionStorageManagerIndexedDB {
         file = new File([], sampleData.name, { type: sampleData.type });
         
       } else {
-        // Legacy: try to load from raw file data (for backward compatibility)
-        const arrayBuffer = await sampleData.data.arrayBuffer();
+        // Raw audio bytes.
+        const arrayBuffer = storedBytes;
         file = await this.arrayBufferToFile(arrayBuffer, sampleData.name, sampleData.type);
         audioBuffer = await this.arrayBufferToAudioBuffer(arrayBuffer);
       }
@@ -494,4 +505,4 @@ export class SessionStorageManagerIndexedDB {
 }
 
 // Export singleton instance
-export const sessionStorageIndexedDB = SessionStorageManagerIndexedDB.getInstance(); 
+export const sessionStorageIndexedDB = SessionStorageManagerIndexedDB.getInstance();

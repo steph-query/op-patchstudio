@@ -646,4 +646,4 @@ describe('IndexedDB Operations', () => {
       await expect(indexedDB.add('test-store', { id: 'test' })).rejects.toThrow('Transaction failed');
     });
   });
-}); 
+});

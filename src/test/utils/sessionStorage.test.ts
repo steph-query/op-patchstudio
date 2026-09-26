@@ -40,6 +40,12 @@ describe('sessionStorage', () => {
         isSessionRestorationModalOpen: false,
         sessionInfo: null,
         midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false,
         drumSettings: {
           sampleRate: 44100,
           bitDepth: 16,
