@@ -41,6 +41,15 @@ async function convertChannels(audioBuffer: AudioBuffer, targetChannels: number)
 
 export interface WavExportOptions {
   rootNote?: number;
+  /**
+   * Loop points as **inclusive** 0-based frame indices, which is what the RIFF
+   * `smpl` chunk stores: `dwStart` is the first frame played and `dwEnd` the last.
+   *
+   * Callers used to disagree about this — one passed `framecount - 1` and another
+   * `framecount` — and the writer subtracted 1 from both, which was right for at
+   * most one of them and never right for the start. A start of 0 became
+   * 4294967295, because -1 written as an unsigned 32-bit value wraps.
+   */
   loopStart?: number;
   loopEnd?: number;
   sampleRate?: number; // Target sample rate (11025, 22050, 44100)
@@ -146,8 +155,13 @@ export async function audioBufferToWav(
     // Loop data (24 bytes)
     dataView.setUint32(offset, 0, true); offset += 4; // cue point ID
     dataView.setUint32(offset, 0, true); offset += 4; // type (0 = forward loop)
-    dataView.setUint32(offset, (options.loopStart ?? 0) - 1, true); offset += 4; // start (subtract 1 to match reference)
-    dataView.setUint32(offset, (options.loopEnd ?? (bufferLength - 1)) - 1, true); offset += 4; // end (subtract 1 frame)
+    // Written as given: both are inclusive frame indices, and clamped so a bad
+    // value cannot become an enormous unsigned one.
+    const lastFrame = Math.max(0, bufferLength - 1);
+    const loopStartFrame = Math.min(Math.max(0, Math.round(options.loopStart ?? 0)), lastFrame);
+    const loopEndFrame = Math.min(Math.max(loopStartFrame, Math.round(options.loopEnd ?? lastFrame)), lastFrame);
+    dataView.setUint32(offset, loopStartFrame, true); offset += 4; // first frame of the loop
+    dataView.setUint32(offset, loopEndFrame, true); offset += 4; // last frame of the loop
     dataView.setUint32(offset, 0, true); offset += 4; // fraction
     dataView.setUint32(offset, 0, true); offset += 4; // play count
   }

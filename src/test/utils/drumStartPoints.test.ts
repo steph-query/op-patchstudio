@@ -42,8 +42,7 @@ vi.mock('../../utils/valueConversions', () => ({
 
 // Mock JSON imports
 vi.mock('../../utils/jsonImport', () => ({
-  mergeImportedDrumSettings: vi.fn(),
-  mergeImportedMultisampleSettings: vi.fn()
+  mergeImportedSettings: vi.fn()
 }));
 
 describe('Drum patch generation with start/end points', () => {
@@ -135,7 +134,13 @@ describe('Drum patch generation with start/end points', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3'
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
 
     // Mock JSZip to capture what files are added
@@ -263,7 +268,13 @@ describe('Drum patch generation with start/end points', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3'
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
 
     // Mock JSZip to capture what files are added

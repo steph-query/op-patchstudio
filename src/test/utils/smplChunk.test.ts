@@ -209,8 +209,12 @@ describe('SMPL Chunk Functionality', () => {
       // Verify loop data (offset 36 from smpl data start)
       const loopStart = dataView.getUint32(smplDataOffset + 36 + 8, true);
       const loopEnd = dataView.getUint32(smplDataOffset + 36 + 12, true);
+      // Both are inclusive frame indices and are written as given. The writer used to
+      // subtract 1 from each "to match reference", which was right for at most one of
+      // its two callers — they disagreed about whether the end was inclusive — and
+      // never right for the start.
       expect(loopStart).toBe(200);
-      expect(loopEnd).toBe(799); // 800 - 1 (subtract 1 frame from end marker)
+      expect(loopEnd).toBe(800);
     });
 
     it('should handle different bit depths with SMPL metadata', async () => {
@@ -294,9 +298,12 @@ describe('SMPL Chunk Functionality', () => {
       const midiNote = dataView.getUint32(smplDataOffset + 12, true);
       expect(midiNote).toBe(60);
       
-      // Default loop end should be buffer length - 2 (subtract 1 frame from end marker)
+      // With no loop points given, the loop is the whole sample: first frame to last.
+      // It used to end at length - 2, a frame short of the audio for no reason.
+      const loopStart = dataView.getUint32(smplDataOffset + 36 + 8, true);
       const loopEnd = dataView.getUint32(smplDataOffset + 36 + 12, true);
-      expect(loopEnd).toBe(mockBuffer.length - 2);
+      expect(loopStart).toBe(0);
+      expect(loopEnd).toBe(mockBuffer.length - 1);
     });
   });
 
@@ -388,3 +395,44 @@ describe('SMPL Chunk Functionality', () => {
     });
   });
 }); 
+describe('loop points that used to be written wrong', () => {
+  async function loopPointsOf(buffer: AudioBuffer, options: { loopStart?: number; loopEnd?: number }) {
+    const bytes = new Uint8Array(await (await audioBufferToWav(buffer, 16, { rootNote: 60, ...options })).arrayBuffer());
+    const view = new DataView(bytes.buffer);
+    // Walk the chunk list rather than assuming where smpl landed.
+    let offset = 12;
+    while (offset + 8 <= bytes.length) {
+      const id = String.fromCharCode(...bytes.slice(offset, offset + 4));
+      const size = view.getUint32(offset + 4, true);
+      if (id === 'smpl') {
+        return {
+          start: view.getUint32(offset + 8 + 36 + 8, true),
+          end: view.getUint32(offset + 8 + 36 + 12, true),
+        };
+      }
+      offset += 8 + size + (size % 2);
+    }
+    throw new Error('no smpl chunk');
+  }
+
+  it('does not turn a loop starting at the first frame into 4294967295', async () => {
+    // The writer subtracted 1 from the start, and -1 written as an unsigned 32-bit
+    // value wraps to the largest possible frame index — a loop beginning past the end
+    // of any file. Two callers in patchGeneration pass a loop start of 0.
+    const { start, end } = await loopPointsOf(createMockAudioBuffer(1000), { loopStart: 0, loopEnd: 999 });
+    expect(start).toBe(0);
+    expect(end).toBe(999);
+  });
+
+  it('keeps a loop inside the audio even when asked for more', async () => {
+    const { start, end } = await loopPointsOf(createMockAudioBuffer(1000), { loopStart: 5000, loopEnd: 9000 });
+    expect(start).toBe(999);
+    expect(end).toBe(999);
+  });
+
+  it('never writes an end before its start', async () => {
+    const { start, end } = await loopPointsOf(createMockAudioBuffer(1000), { loopStart: 800, loopEnd: 100 });
+    expect(start).toBe(800);
+    expect(end).toBeGreaterThanOrEqual(start);
+  });
+});

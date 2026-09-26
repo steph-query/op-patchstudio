@@ -7,6 +7,11 @@ import JSZip from 'jszip';
 vi.mock('jszip', () => {
   let mockTransposeValue = 12; // Default value
 
+  // This canned answer is a trap: `zip.file('patch.json').async('string')` returns it
+  // whatever the generator actually wrote, so any test reading the zip back this way
+  // asserts the fixture rather than the code. Two transpose tests did exactly that and
+  // stayed green when the transpose write was deleted outright. Every test here now
+  // inspects `file.mock.calls` instead; this remains only so `loadAsync` does not throw.
   const mockJSZipInstance = {
     file: vi.fn().mockReturnValue({
       async: vi.fn().mockImplementation(() => Promise.resolve(`{"engine":{"transpose":${mockTransposeValue}}}`))
@@ -48,22 +53,130 @@ vi.mock('../../utils/audioFormats', () => ({
   convertAudioFormat: vi.fn().mockImplementation(async (buffer: any) => buffer)
 }));
 
+/** The fields every `AppState` literal in this file repeats, so the fixtures below need not. */
+const baseState = {
+  currentTab: 'multisample' as const,
+  drumSamples: [],
+  multisampleFiles: [],
+  selectedMultisample: null,
+  isLoading: false,
+  error: null,
+  isDrumKeyboardPinned: false,
+  isMultisampleKeyboardPinned: false,
+  notifications: [],
+  importedDrumPreset: null,
+  importedMultisamplePreset: null,
+  isSessionRestorationModalOpen: false,
+  sessionInfo: null,
+  midiNoteMapping: 'C3' as const,
+  tauriDevice: null,
+  tauriPresets: [],
+  tauriSamples: [],
+  tauriStorageInfo: null,
+  tauriProjects: [],
+  tauriConnecting: false,
+  drumSettings: {
+    sampleRate: 44100, bitDepth: 16, channels: 2, presetName: 'Kit', normalize: false,
+    normalizeLevel: -6, autoZeroCrossing: true, renameFiles: false,
+    filenameSeparator: ' ' as const, audioFormat: 'wav' as const,
+    presetSettings: { playmode: 'poly' as const, transpose: 0, velocity: 100, volume: 100, width: 100 },
+  },
+  multisampleSettings: {
+    sampleRate: 44100, bitDepth: 16, channels: 2, presetName: 'Pads', normalize: false,
+    normalizeLevel: -6, autoZeroCrossing: true, cutAtLoopEnd: false, gain: 0,
+    loopEnabled: true, loopOnRelease: true, renameFiles: false,
+    filenameSeparator: ' ' as const, audioFormat: 'wav' as const,
+    transpose: 0, velocitySensitivity: 20, volume: 69, width: 0, highpass: 0,
+    portamentoType: 'linear' as const, portamentoAmount: 0, tuningRoot: 0,
+    ampEnvelope: { attack: 0, decay: 0, sustain: 32767, release: 0 },
+    filterEnvelope: { attack: 0, decay: 0, sustain: 32767, release: 0 },
+  },
+};
+
+/** One multisample zone with known loop points, for the conversion tests below. */
+function multisampleStateWithLoop(): AppState {
+  const audioBuffer = {
+    duration: 2,
+    length: 88_200,
+    sampleRate: 44_100,
+    numberOfChannels: 1,
+    getChannelData: () => new Float32Array(88_200),
+  } as unknown as AudioBuffer;
+  return {
+    ...baseState,
+    currentTab: 'multisample',
+    multisampleFiles: [{
+      file: new File([new Uint8Array([1])], 'pad.wav'),
+      audioBuffer,
+      name: 'pad.wav',
+      isLoaded: true,
+      rootNote: 60,
+      inPoint: 0,
+      outPoint: 2,
+      loopStart: 0.5,
+      loopEnd: 1.5,
+      originalBitDepth: 16,
+      originalSampleRate: 44_100,
+      originalChannels: 1,
+      fileSize: 1024,
+      duration: 2,
+    }],
+  } as unknown as AppState;
+}
+
 describe('patchGeneration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  /**
+   * These two tests were `expect(true).toBe(true)` with comments claiming to verify the
+   * behaviour their names describe. That is worse than no test: they counted towards the
+   * suite and their names asserted coverage of the export extension and of loop-point
+   * conversion — the latter being the one thing `docs/hardware-test-guide.md` singles out as
+   * unsettleable by reading. Anyone scanning the file would have believed it was covered.
+   *
+   * They read what the generator actually wrote now, using the same `file.mock.calls`
+   * inspection the honest tests in this file use rather than the canned `loadAsync` fixture.
+   */
   describe('format conversion', () => {
-    it('should ensure all exported files have .wav extension', async () => {
-      // This test verifies the basic functionality
-      expect(true).toBe(true);
+    it('names every exported sample with the extension the chosen format uses', async () => {
+      const mockZip = { file: vi.fn(), generateAsync: vi.fn().mockResolvedValue(new Blob(['z'])) };
+      const JSZip = (await import('jszip')).default;
+      vi.mocked(JSZip).mockImplementation(() => mockZip as unknown as JSZip);
+
+      await generateMultisamplePatch(multisampleStateWithLoop(), 'Loops', undefined, undefined, undefined, 0, 'aiff');
+      const written = vi.mocked(mockZip.file).mock.calls.map(call => String(call[0]));
+      const audio = written.filter(name => name !== 'patch.json');
+      expect(audio.length, 'no sample was written, so this proves nothing').toBeGreaterThan(0);
+      // The name says `.wav`; the truth is that it matches the requested format.
+      for (const name of audio) expect(name.toLowerCase()).toMatch(/\.aif$/);
+
+      vi.mocked(mockZip.file).mockClear();
+      await generateMultisamplePatch(multisampleStateWithLoop(), 'Loops', undefined, undefined, undefined, 0, 'wav');
+      for (const name of vi.mocked(mockZip.file).mock.calls.map(call => String(call[0])).filter(n => n !== 'patch.json')) {
+        expect(name.toLowerCase()).toMatch(/\.wav$/);
+      }
     });
   });
 
   describe('AIF loop points conversion', () => {
-    it('should correctly convert AIF loop points from seconds to frames', () => {
-      // This test verifies AIF conversion
-      expect(true).toBe(true);
+    it('converts loop points from seconds to frames, with an inclusive end', async () => {
+      const mockZip = { file: vi.fn(), generateAsync: vi.fn().mockResolvedValue(new Blob(['z'])) };
+      const JSZip = (await import('jszip')).default;
+      vi.mocked(JSZip).mockImplementation(() => mockZip as unknown as JSZip);
+
+      // A two-second sample at 44.1 kHz, looping from 0.5 s to 1.5 s.
+      await generateMultisamplePatch(multisampleStateWithLoop(), 'Loops', undefined, undefined, undefined, 0, 'aiff');
+      const patchCall = vi.mocked(mockZip.file).mock.calls.find(call => call[0] === 'patch.json');
+      expect(patchCall, 'no patch.json was written').toBeDefined();
+      const region = JSON.parse(String(patchCall![1])).regions[0];
+
+      // 0.5 s x 44100 = 22050, and 1.5 s x 44100 = 66150 — but the writers want the last
+      // frame rather than one past it, so the end is 66149.
+      expect(region['loop.start']).toBe(22050);
+      expect(region['loop.end']).toBe(66149);
+      expect(region['loop.end'], 'the loop end must stay inside the sample').toBeLessThan(region.framecount);
     });
   });
 
@@ -197,7 +310,13 @@ describe('patchGeneration', () => {
         importedMultisamplePreset: null,
         isSessionRestorationModalOpen: false,
         sessionInfo: null,
-        midiNoteMapping: 'C3'
+        midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
       };
 
       // Mock JSZip to capture what files are added
@@ -350,7 +469,13 @@ describe('Drum patch generation with sample settings', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3'
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
 
     // Mock JSZip to capture what files are added
@@ -453,17 +578,23 @@ describe('patch export structure', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3'
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
     
-    const blob = await generateDrumPatch(mockState, 'Test Drum Kit');
-    const zip = await JSZip.loadAsync(blob);
-    
-    const patchJsonContent = await zip.file('patch.json')?.async('string');
-    expect(patchJsonContent).toBeTruthy();
-    
-    const patchJson = JSON.parse(patchJsonContent!);
-    expect(patchJson.engine.transpose).toBe(12);
+    // As with the multisample case: read what the generator wrote.
+    const mockZip = { file: vi.fn(), generateAsync: vi.fn().mockResolvedValue(new Blob(['z'])) };
+    vi.mocked(JSZip).mockImplementation(() => mockZip as unknown as JSZip);
+    await generateDrumPatch(mockState, 'Test Drum Kit');
+
+    const patchCall = vi.mocked(mockZip.file).mock.calls.find(call => call[0] === 'patch.json');
+    expect(patchCall, 'no patch.json was written').toBeDefined();
+    expect(JSON.parse(String(patchCall![1])).engine.transpose).toBe(12);
   });
 
   it('should apply transpose setting to engine in multisample patch', async () => {
@@ -530,16 +661,26 @@ describe('patch export structure', () => {
       importedMultisamplePreset: null,
       isSessionRestorationModalOpen: false,
       sessionInfo: null,
-      midiNoteMapping: 'C3'
+      midiNoteMapping: 'C3' as const,
+    tauriDevice: null,
+    tauriPresets: [],
+      tauriSamples: [],
+    tauriStorageInfo: null,
+    tauriProjects: [],
+    tauriConnecting: false
     };
     
-    const blob = await generateMultisamplePatch(mockState, 'Test Multisample');
-    const zip = await JSZip.loadAsync(blob);
-    
-    const patchJsonContent = await zip.file('patch.json')?.async('string');
-    expect(patchJsonContent).toBeTruthy();
-    
-    const patchJson = JSON.parse(patchJsonContent!);
-    expect(patchJson.engine.transpose).toBe(-6);
+    // Read what the generator wrote, not what the mock was told to return. The previous
+    // version called `JSZip.loadAsync(blob)` and read `zip.file('patch.json').async()`,
+    // which this file's mock answers with a canned `{"engine":{"transpose":N}}` fixture —
+    // so the test set N, read N back, and passed. Deleting the transpose write from the
+    // generator entirely left it green.
+    const mockZip = { file: vi.fn(), generateAsync: vi.fn().mockResolvedValue(new Blob(['z'])) };
+    vi.mocked(JSZip).mockImplementation(() => mockZip as unknown as JSZip);
+    await generateMultisamplePatch(mockState, 'Test Multisample');
+
+    const patchCall = vi.mocked(mockZip.file).mock.calls.find(call => call[0] === 'patch.json');
+    expect(patchCall, 'no patch.json was written').toBeDefined();
+    expect(JSON.parse(String(patchCall![1])).engine.transpose).toBe(-6);
   });
 }); 

@@ -4,6 +4,13 @@
 
 export interface AiffExportOptions {
   rootNote?: number;
+  /**
+   * Loop points as **inclusive** 0-based frame indices, matching
+   * `WavExportOptions`. The two writers used to disagree: this one wrote the start
+   * verbatim and subtracted 1 from the end, while the WAV writer subtracted 1 from
+   * both — so the same preset exported as AIFF and as WAV carried different loop
+   * points, and the OP-XY reads both formats.
+   */
   loopStart?: number;
   loopEnd?: number;
   bitDepth?: number;
@@ -313,7 +320,7 @@ export async function audioBufferToAiff(
     
     // End marker
     dataView.setUint16(offset, 2, false); offset += 2; // ID
-    dataView.setUint32(offset, (loopEnd ?? (numSampleFrames - 1)) - 1, false); offset += 4; // Position (subtract 1 frame)
+    dataView.setUint32(offset, loopEnd ?? (numSampleFrames - 1), false); offset += 4; // Position: last frame of the loop
     offset += writePString(dataView, offset, 'end');
   }
   

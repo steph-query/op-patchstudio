@@ -5,7 +5,7 @@ import { exportAudioBuffer, getAudioFileExtension, type AudioFormat } from './au
 import { baseDrumJson } from '../components/drum/baseDrumJson';
 import { baseMultisampleJson } from '../components/multisample/baseMultisampleJson';
 import { percentToInternal } from './valueConversions';
-import { mergeImportedDrumSettings, mergeImportedMultisampleSettings } from './jsonImport';
+import { mergeImportedSettings } from './jsonImport';
 import type { AppState, MultisampleFile } from '../context/AppContext';
 
 // Extended MultisampleFile type for key range calculations
@@ -118,7 +118,7 @@ export async function generateDrumPatch(
   patchJson.regions = [];
 
   // Merge imported preset settings if they exist
-  mergeImportedDrumSettings(patchJson, (state as any).importedDrumPresetJson);
+  mergeImportedSettings(patchJson, (state as any).importedDrumPresetJson);
 
   // Apply drum preset settings (convert from 0-100% to 0-32767)
   if (patchJson.engine && state.drumSettings.presetSettings) {
@@ -293,7 +293,7 @@ export async function generateMultisamplePatch(
   patchJson.regions = [];
 
   // Merge imported preset settings if they exist
-  mergeImportedMultisampleSettings(patchJson, (state as any).importedMultisamplePreset);
+  mergeImportedSettings(patchJson, (state as any).importedMultisamplePreset);
 
   // Apply multisample preset settings
   if (patchJson.engine && state.multisampleSettings) {
@@ -403,7 +403,11 @@ export async function generateMultisamplePatch(
     // Scale loop points to target sample rate if resampling
     const scaleFactor = effectiveSampleRate / originalSampleRate;
     const scaledLoopStart = Math.floor(loopStart * scaleFactor);
-    const scaledLoopEnd = Math.floor(loopEnd * scaleFactor);
+    // `loopEnd` above is clamped to the frame count, so it is an exclusive end.
+    // The exporters want an inclusive last frame — the same thing the `smpl` chunk
+    // and the AIFF loop marker store — so convert it here rather than leaving each
+    // writer to guess which convention its caller used.
+    const scaledLoopEnd = Math.max(scaledLoopStart, Math.floor(loopEnd * scaleFactor) - 1);
     
     // Calculate sample start/end points using target sample rate
     const sampleStart = getClamped(Math.floor(framecount * (prop(sample.inPoint, 0) / duration)), 0, framecount - 1);
