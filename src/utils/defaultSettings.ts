@@ -74,7 +74,14 @@ export interface ExtendedMultisampleDefaults {
 }
 
 // Save drum settings as default (including imported preset data)
-export function saveDrumSettingsAsDefault(settings: AppState['drumSettings'], importedPreset: any | null = null): void {
+/**
+ * Returns whether the settings actually persisted.
+ *
+ * Cookies over roughly 4 KB are discarded by the browser without an error, and these carry
+ * the imported preset, which can be large. The caller shows a success notification, so
+ * without a result it would say "saved as default" for something that did not save.
+ */
+export function saveDrumSettingsAsDefault(settings: AppState['drumSettings'], importedPreset: any | null = null): boolean {
   try {
     const settingsToSave: ExtendedDrumDefaults = {
       basicSettings: {
@@ -99,14 +106,16 @@ export function saveDrumSettingsAsDefault(settings: AppState['drumSettings'], im
       importedPreset: importedPreset
     };
     
-    cookieUtils.setCookie(COOKIE_KEYS.DRUM_DEFAULT_SETTINGS, JSON.stringify(settingsToSave), 365);
+    return cookieUtils.setCookie(COOKIE_KEYS.DRUM_DEFAULT_SETTINGS, JSON.stringify(settingsToSave), 365);
   } catch (error) {
     console.warn('Failed to save drum default settings:', error);
+    return false;
   }
 }
 
 // Save multisample settings as default (including imported preset data)
-export function saveMultisampleSettingsAsDefault(settings: AppState['multisampleSettings'], importedPreset: any | null = null): void {
+/** Returns whether the settings actually persisted; see `saveDrumSettingsAsDefault`. */
+export function saveMultisampleSettingsAsDefault(settings: AppState['multisampleSettings'], importedPreset: any | null = null): boolean {
   try {
     const settingsToSave: ExtendedMultisampleDefaults = {
       basicSettings: {
@@ -140,9 +149,10 @@ export function saveMultisampleSettingsAsDefault(settings: AppState['multisample
       importedPreset: importedPreset
     };
     
-    cookieUtils.setCookie(COOKIE_KEYS.MULTISAMPLE_DEFAULT_SETTINGS, JSON.stringify(settingsToSave), 365);
+    return cookieUtils.setCookie(COOKIE_KEYS.MULTISAMPLE_DEFAULT_SETTINGS, JSON.stringify(settingsToSave), 365);
   } catch (error) {
     console.warn('Failed to save multisample default settings:', error);
+    return false;
   }
 }
 
