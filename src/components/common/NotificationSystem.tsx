@@ -55,7 +55,7 @@ export function NotificationSystem({ notifications, onDismiss }: NotificationSys
       flexDirection: 'column',
       gap: '10px',
       maxWidth: '400px',
-      fontFamily: '"Montserrat", "Arial", sans-serif'
+      fontFamily: '"Inter", "Helvetica Neue", sans-serif'
     }}>
       {notifications.map(notification => {
         const icon = getIcon(notification.type);

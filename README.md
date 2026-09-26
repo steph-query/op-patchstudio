@@ -1,3 +1,44 @@
+# Fieldwork
+
+An independent Mac studio companion for the field system.
+
+Create OP-XY drum kits and multisamples, browse OP-1 Field patches and tapes, organize TP-7 recordings, and preserve device libraries with verified backups and additive recovery.
+
+Recordings become a local library that outlives the cable: import them from a connected recorder, or add files already on your Mac. Takes are kept by content, remember where they came from, and can be auditioned, marked into named regions, and sent straight to a drum pad or a sample zone — all with nothing plugged in. WAV and AIFF are both read, so an OP-1 field tape track works the same as a TP-7 take. Every write to an instrument is reviewed once, verified byte for byte, and — if the cable comes out mid-transfer — can be finished by adding only the files that are missing. An imported preset is treated as untrusted input — a shared `.json` cannot inject keys into the app or into the patches you generate afterwards. Existing content is never replaced: every write path refuses a name that is already taken, enforced in the native layer rather than by the interface. A restore refuses outright if any single file conflicts, before writing anything. Native tests fail if a guard is dropped — and one of them derives the list of write paths from the source, so a new one cannot be added without being covered.
+
+Takes can be named. A TP-7 hands you `2026-02-23_112713_000.wav`; in your library that becomes "yard door slam". It is a label rather than a file rename, so the bytes stay where they are, re-importing the same audio is still recognized as a duplicate, and the name the recorder gave it stays visible — searching finds a take by either one. Nothing on the instrument is renamed; this app does not do that.
+
+Before you tidy a library, the projects inspector answers the question that actually blocks you: **which projects use this sample?** One press reads every `.xy` on the device and labels each reference with the other projects that share it, by name. If a project cannot be read, the answer is reported as unknown rather than guessed — an unread project is as likely as any other to be the only thing holding a file — and nothing is ever described as safe to delete.
+
+The visual identity is mineral surfaces, graphite navigation, signal-orange accents, native offline typography, and an original app icon. The app is keyboard-first: `⌘1`–`⌘9` reach the tabs, `?` lists every shortcut, and every dialog takes the keyboard when it opens, keeps tab inside itself, and returns focus to whatever opened it when it closes. Every control you can click can be reached and operated without a mouse. The currently supported integrations are **OP-1 Field, OP-XY and TP-7**; this is not an official teenage engineering application.
+
+## Run and build
+
+```sh
+npm install
+npm run dev
+npm test
+npm run test:e2e
+npm run build:mac -- --no-sign -- --offline
+```
+
+`npm test` runs the unit and component suites; `npm run test:e2e` runs the browser suite in WebKit — the engine Tauri renders in on macOS — and then Chromium.
+
+Native packaging requires Rust, Xcode command-line tools and the Tauri 2 CLI. The Apple Silicon installer is generated in `src-tauri/target/release/bundle/dmg/`. Local builds are unsigned and not notarized.
+
+The DMG step runs an AppleScript to arrange the Finder window and needs Automation → Finder permission; without it the bundler fails *after* building the app. `npm run tauri build -- --bundles app` plus `hdiutil create` gets you the same installable image — see [the hardware-test guide](docs/hardware-test-guide.md#verified-test-build) for the exact commands.
+
+Read the [hardware-test checklist](docs/hardware-test-guide.md) before connecting devices, and use the [results sheet](docs/hardware-results-sheet.md) to record what happens — it carries every check as a line to write on, plus the six timed comparisons with this app's half already measured. The [design-system reference](docs/design-system.md) is there when extending the UI.
+
+## Compatibility and credits
+
+Fieldwork preserves existing library/session storage and legacy doxy backups. Device sends remain OP-XY-specific; unsupported workflows are not implied by the broader branding.
+
+Built on [OP-PatchStudio by Joseph Holland](https://github.com/joseph-holland/op-patchstudio), with its original license and attribution retained. Fieldwork is not affiliated with or endorsed by teenage engineering. The working name has not undergone trademark clearance.
+
+<details>
+<summary>Original upstream project documentation</summary>
+
 # OP-PatchStudio
 
 **free & open source preset creator for OP synthesizers. upload samples, edit waveforms, adjust settings and generate patches instantly.**
@@ -210,3 +251,4 @@ OP-PatchStudio is an unofficial tool not affiliated with or endorsed by teenage 
 this software is provided "as is" without warranty of any kind. use at your own risk. for educational and personal use only.
 OP-XY, OP-1 and OP-Z are registered trademarks of teenage engineering.
 
+</details>

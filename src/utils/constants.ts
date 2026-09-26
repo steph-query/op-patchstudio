@@ -1,4 +1,4 @@
-// App-wide constants for OP-PatchStudio
+// App-wide constants for doxy
 
 // Audio processing constants
 export const AUDIO_CONSTANTS = {
@@ -29,11 +29,6 @@ export const MIDI_CONSTANTS = {
   C3_NOTE: 60, // C3 = 60 (Yamaha/OP-1/OP-Z convention)
   MAX_NOTE: 127,
   MIN_NOTE: 0,
-} as const;
-
-// Feature flags
-export const FEATURE_FLAGS = {
-  DONATE_PAGE: true, // Enable/disable donate page tab
 } as const;
 
 // Filename separator options for generated preset files

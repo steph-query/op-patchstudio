@@ -874,7 +874,7 @@ export function VirtualMidiKeyboard({
                     fontSize: '0.875rem',
                     color: 'var(--color-white)',
                     transition: 'all 0.2s ease',
-                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontFamily: '"Inter", "Helvetica Neue", sans-serif',
                     fontWeight: 500,
                     minHeight: '32px'
                   }}

@@ -47,7 +47,7 @@ export function LibraryTable({
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
       border: `1px solid ${c.border}`,
       overflow: 'hidden',
-      fontFamily: '"Montserrat", "Arial", sans-serif',
+      fontFamily: '"Inter", "Helvetica Neue", sans-serif',
       ...style
     }}>
       {/* Header */}

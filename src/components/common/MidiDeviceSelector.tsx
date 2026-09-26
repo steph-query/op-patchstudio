@@ -29,7 +29,7 @@ function MidiChannelSelector({ selectedChannel, onChannelChange }: MidiChannelSe
           padding: '0.25rem 0.5rem',
           fontSize: '0.75rem',
           color: 'var(--color-text-primary)',
-          fontFamily: '"Montserrat", "Arial", sans-serif',
+          fontFamily: '"Inter", "Helvetica Neue", sans-serif',
           cursor: 'pointer',
           minWidth: '60px'
         }}
@@ -147,7 +147,7 @@ export function MidiDeviceSelector({
                 cursor: state.isConnecting ? 'not-allowed' : 'pointer',
                 opacity: state.isConnecting ? 0.6 : 1,
                 transition: 'all 0.2s ease',
-                fontFamily: '"Montserrat", "Arial", sans-serif',
+                fontFamily: '"Inter", "Helvetica Neue", sans-serif',
                 fontWeight: 500,
                 height: '36px',
                 display: 'flex',

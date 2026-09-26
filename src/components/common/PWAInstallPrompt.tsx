@@ -174,7 +174,7 @@ const PWAInstallPrompt: React.FC = () => {
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
         transition: 'opacity 0.2s ease, transform 0.2s ease',
-        fontFamily: '"Montserrat", "Arial", sans-serif'
+        fontFamily: '"Inter", "Helvetica Neue", sans-serif'
       }}
     >
       <div style={{ marginBottom: '12px' }}>
@@ -185,7 +185,7 @@ const PWAInstallPrompt: React.FC = () => {
           fontWeight: '500',
           color: 'var(--color-text-primary)'
         }}>
-          install OP-PatchStudio offline
+          install Fieldwork offline
         </strong>
         <span style={{ 
           fontSize: '0.875rem', 
@@ -294,4 +294,4 @@ const PWAInstallPrompt: React.FC = () => {
   );
 };
 
-export default PWAInstallPrompt; 
+export default PWAInstallPrompt;

@@ -82,7 +82,7 @@ export function DonatePage() {
               lineHeight: 1.6,
               marginBottom: '2rem'
             }}>
-              OP-PatchStudio is a 100% free and <a href="https://github.com/joseph-holland/op-patchstudio" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-interactive-primary)', textDecoration: 'underline' }}>open-source</a> tool for creating and editing drum and multisample presets for the OP-XY (more devices coming soon).<br/><br/>
+              Fieldwork is a free, independent studio companion for OP-1 Field, OP-XY and TP-7, built on <a href="https://github.com/joseph-holland/op-patchstudio" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-interactive-primary)', textDecoration: 'underline' }}>open-source foundations</a>.<br/><br/>
               most features have come from community ideas and requests. by joining the <a href="https://www.patreon.com/c/oppatchstudio" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-interactive-primary)', textDecoration: 'underline' }}>project patreon</a>, you'll get behind-the-scenes updates, voting rights on roadmap features, priority support, exclusive content, tutorials and early access to preview features.<br/><br/>
               your support helps cover the cost of coding tools and services that make rapid development of new features and support possible.
             </p>
@@ -319,4 +319,4 @@ export function DonatePage() {
       </div>
     </>
   );
-} 
+}
