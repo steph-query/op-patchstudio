@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validatePresetJson } from '../../utils/presetImport'
+import { validatePresetJson, importPresetFromFile } from '../../utils/presetImport'
 
 describe('presetImport', () => {
   describe('validatePresetJson', () => {
@@ -261,4 +261,49 @@ describe('presetImport', () => {
       })
     })
   })
-})
+  /**
+   * `importPresetFromFile` is what the drum and multisample settings panels actually call —
+   * it checks the extension, reads the file, parses it, and hands off to the validator. It
+   * had **no test at all**, while a *second* `validatePresetJson` in `jsonImport.ts`, which
+   * nothing reached, did have one. So the covered validator was the dead one and the live
+   * entry point was uncovered. That duplicate is gone; this covers the live path.
+   */
+  describe('importPresetFromFile', () => {
+    // jsdom's `File` has no `text()`, and `importPresetFromFile` calls it — so supply one
+    // rather than reaching past the function being tested.
+    const asFile = (name: string, body: string) => {
+      const file = new File([body], name, { type: 'application/json' });
+      Object.defineProperty(file, 'text', { value: async () => body });
+      return file;
+    };
+
+    it('imports a drum preset from a .json file', async () => {
+      const result = await importPresetFromFile(asFile('kit.json', JSON.stringify({ type: 'drum', engine: {} })), 'drum');
+      expect(result.success).toBe(true);
+    });
+
+    it('refuses anything that is not a .json file, by extension', async () => {
+      const result = await importPresetFromFile(asFile('kit.txt', '{}'), 'drum');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('JSON file');
+    });
+
+    it('says where malformed JSON goes wrong, not merely that it is malformed', async () => {
+      // The reason this matters: these files are hand-edited. "Unexpected token } at
+      // position 41" is the difference between fixing it and giving up on the file.
+      const result = await importPresetFromFile(asFile('kit.json', '{ "type": "drum", "engine": {}'), 'drum');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid JSON format');
+      expect(result.error!.length, 'the parse reason must survive, not just the category')
+        .toBeGreaterThan('Invalid JSON format: '.length + 5);
+      expect(result.error).toMatch(/position|token|end of|expected|JSON/i);
+    });
+
+    it('explains a preset imported into the wrong tool rather than just rejecting it', async () => {
+      const result = await importPresetFromFile(asFile('pad.json', JSON.stringify({ type: 'multisampler', engine: {} })), 'drum');
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/multisample/i);
+      expect(result.error, 'it should say which tab to switch to').toMatch(/tab|switch/i);
+    });
+  });
+});

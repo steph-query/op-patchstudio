@@ -112,55 +112,36 @@ export function importMultisamplePresetJson(
   }
 }
 
-// Merge imported preset settings with base JSON during patch generation
-export function mergeImportedDrumSettings(baseJson: any, importedJson?: ImportedPresetJson): void {
+/**
+ * Merge an imported preset's settings into the base patch JSON.
+ *
+ * There were two of these — `mergeImportedDrumSettings` and
+ * `mergeImportedMultisampleSettings` — byte-for-byte identical apart from their names. Both
+ * base patches carry exactly the same sections, so there was never a drum/multisample
+ * difference to express. Keeping two copies is how a fix reaches one caller and not the
+ * other, which is precisely what happened to `validatePresetJson` in this same file: the copy
+ * that received the improvement turned out to be the one nothing called.
+ *
+ * `deepMerge` is what refuses `__proto__` and friends, so the untrusted-input guarding lives
+ * one level down and applies to every caller of this.
+ */
+export function mergeImportedSettings(baseJson: any, importedJson?: ImportedPresetJson): void {
   if (!importedJson) return;
 
-  // Merge sections that should be preserved from imported preset
-  const sectionsToMerge = ['engine', 'envelope', 'fx', 'lfo', 'octave'];
-  
-  sectionsToMerge.forEach(section => {
-    if (importedJson[section as keyof ImportedPresetJson]) {
-      if (!baseJson[section]) baseJson[section] = {};
-      deepMerge(baseJson[section], importedJson[section as keyof ImportedPresetJson]);
-    }
-  });
-}
+  // The sections a preset may carry over. Both base patches have all of them, so the
+  // `baseJson[section] = {}` below is a guard rather than a path taken in practice.
+  const sectionsToMerge = ['engine', 'envelope', 'fx', 'lfo', 'octave'] as const;
 
-// Merge imported multisample settings with base JSON during patch generation
-export function mergeImportedMultisampleSettings(baseJson: any, importedJson?: ImportedPresetJson): void {
-  if (!importedJson) return;
-
-  // Merge sections that should be preserved from imported preset
-  const sectionsToMerge = ['engine', 'envelope', 'fx', 'lfo', 'octave'];
-  
-  sectionsToMerge.forEach(section => {
-    if (importedJson[section as keyof ImportedPresetJson]) {
-      if (!baseJson[section]) baseJson[section] = {};
-      deepMerge(baseJson[section], importedJson[section as keyof ImportedPresetJson]);
-    }
-  });
-}
-
-// Validate JSON file before import
-export function validatePresetJson(jsonContent: string): { isValid: boolean; type?: string; error?: string } {
-  try {
-    const json = JSON.parse(jsonContent);
-    
-    if (!json.type) {
-      return { isValid: false, error: 'Missing preset type' };
-    }
-    
-    if (json.type !== 'drum' && json.type !== 'multisampler') {
-      return { isValid: false, error: `Unsupported preset type: ${json.type}` };
-    }
-    
-    if (!json.engine) {
-      return { isValid: false, error: 'Missing engine settings' };
-    }
-    
-    return { isValid: true, type: json.type };
-  } catch (error) {
-    return { isValid: false, error: 'Invalid JSON format' };
+  for (const section of sectionsToMerge) {
+    const incoming = importedJson[section as keyof ImportedPresetJson];
+    if (!incoming) continue;
+    if (!baseJson[section]) baseJson[section] = {};
+    deepMerge(baseJson[section], incoming);
   }
-} 
+}
+
+// Preset validation lives in `presetImport.ts`, which is the path the UI actually uses:
+// `importPresetFromFile` reads the file, parses it and validates in one place. A second
+// `validatePresetJson` used to sit here, reachable only from its own test — so it gave the
+// appearance of coverage for a path no user could reach. The live one keeps the parse
+// position in its message, which is what makes a hand-edited patch.json fixable.
