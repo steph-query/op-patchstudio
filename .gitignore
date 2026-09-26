@@ -24,3 +24,9 @@ dist-ssr
 *.sw?
 
 coverage/*
+
+# Tauri
+src-tauri/target/
+# Local verification artifacts
+.maestro/cargo-home/
+.maestro/downloads/

@@ -1,0 +1,31 @@
+{
+  "note": "Device model strings and the kind both classifiers must return. Read by src/test/utils/deviceClassification.test.ts and by te.rs's tests, so the frontend and native classifiers cannot drift apart. Model strings are vendor-set and inconsistent, which is the whole reason this file exists: add a case here when you meet a real one.",
+  "cases": [
+    { "model": "OP-XY", "productId": null, "kind": "op-xy" },
+    { "model": "OP-XY MTP Device", "productId": null, "kind": "op-xy" },
+    { "model": "opxy", "productId": null, "kind": "op-xy" },
+    { "model": "OP–XY", "productId": null, "kind": "op-xy", "why": "en dash, normalised to a hyphen" },
+    { "model": "OP—XY", "productId": null, "kind": "op-xy", "why": "em dash" },
+    { "model": "OP_XY", "productId": null, "kind": "op-xy", "why": "underscore: a regex word boundary would miss this, a word split does not" },
+    { "model": "XY Device", "productId": null, "kind": "op-xy", "why": "xy as its own word" },
+    { "model": "teenage engineering OP-XY", "productId": null, "kind": "op-xy" },
+
+    { "model": "TP-7", "productId": null, "kind": "tp-7" },
+    { "model": "TP-7 MTP Device", "productId": null, "kind": "tp-7" },
+    { "model": "tp7", "productId": null, "kind": "tp-7" },
+    { "model": "TP–7", "productId": null, "kind": "tp-7", "why": "en dash" },
+    { "model": "", "productId": 25, "kind": "tp-7", "why": "no usable model string, recognised by USB product id 0x0019" },
+    { "model": "MTP Device", "productId": 25, "kind": "tp-7" },
+
+    { "model": "OP-1 Field", "productId": null, "kind": "op-1-field" },
+    { "model": "op1 field", "productId": null, "kind": "op-1-field" },
+    { "model": "OP-1 FIELD MTP", "productId": null, "kind": "op-1-field" },
+    { "model": "OP-1", "productId": null, "kind": "unknown", "why": "the original OP-1 has no MTP transfer mode; do not claim the field profile for it" },
+
+    { "model": "", "productId": null, "kind": "unknown" },
+    { "model": "oxy", "productId": null, "kind": "unknown", "why": "xy inside another word is not a device" },
+    { "model": "Some Other MTP Device", "productId": null, "kind": "unknown" },
+    { "model": "Galaxy S21", "productId": null, "kind": "unknown", "why": "contains xy, but not as a word" },
+    { "model": "iPhone", "productId": 4779, "kind": "unknown", "why": "an unrelated product id is not guessed at" }
+  ]
+}
