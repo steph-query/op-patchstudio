@@ -1,0 +1,19 @@
+# Phase 2: Direct Export to Device
+
+Enable users to export generated presets directly to a connected OP-XY device, eliminating the download-then-copy workflow.
+
+## Context
+
+Currently, OP-PatchStudio generates `.preset.zip` files that users download and manually copy to the OP-XY via Field-Kit or USB. The Device Browser already has read/write File System Access API handles. This phase adds a "Send to Device" button that writes generated presets directly to the correct device directory.
+
+## Implementation
+
+- [ ] **Add export utility `src/utils/deviceExport.ts`** — Create a utility module with: (1) `exportPresetToDevice(rootHandle: FileSystemDirectoryHandle, presetName: string, patchJson: object, sampleFiles: {name: string, data: ArrayBuffer}[], category: string): Promise<void>` — creates the preset folder at `presets/{category}/{presetName}.preset/`, writes `patch.json`, and writes all sample WAV files. (2) `validateExportTarget(rootHandle: FileSystemDirectoryHandle, presetName: string, category: string): Promise<{exists: boolean, conflictFiles: string[]}>` — checks if a preset with the same name already exists and returns conflict info. (3) `getAvailableCategories(rootHandle: FileSystemDirectoryHandle): Promise<string[]>` — lists existing preset categories on device. Use `getDirectoryHandle(name, {create: true})` for folder creation and `getFileHandle(name, {create: true})` + `createWritable()` for file writes. Follow the same error handling patterns as `devicePatchJson.ts`.
+
+- [ ] **Add "Send to Device" button to Drum Tool and Multisample Tool** — Modify `src/components/drum/DrumActions.tsx` (or equivalent action bar component) and the multisample equivalent to add a "Send to Device" button. The button should: (1) only appear when `FEATURE_FLAGS.DEVICE_TAB` is true, (2) be disabled when no device is connected (check for rootHandle in device context or via a shared connection state), (3) on click, show a category picker dropdown (drum, keys, bass, etc.) and name input, (4) validate the name against OP-XY filename constraints (same regex as DeviceRenameModal), (5) check for conflicts via `validateExportTarget`, (6) if conflict exists, show confirmation dialog before overwriting. Find the existing export/download button locations by reading the drum and multisample action components first.
+
+- [ ] **Implement export progress and feedback** — Add a progress indicator during export (writing X of Y samples). Use the existing notification dispatch pattern from `AppContext.tsx` to show success/error messages. Handle partial failures gracefully — if sample 3 of 8 fails to write, report which files succeeded and which failed. Add a "View on Device" link after successful export that switches to the Device tab and selects the newly exported preset.
+
+- [ ] **Share device connection state across tabs** — Currently `useDeviceConnection` state is local to DevicePage. Lift the `rootHandle` into AppContext so other tabs can access the device connection. Add to AppContext state: `deviceRootHandle: FileSystemDirectoryHandle | null` and actions `SET_DEVICE_HANDLE`. Update `useDeviceConnection` to dispatch to context instead of local state. Update DevicePage and the new export buttons to read from context. This is a minimal change — only the handle needs to be shared, not the full browser state.
+
+- [ ] **Write tests for device export** — Create `src/test/utils/deviceExport.test.ts`. Test: (1) `exportPresetToDevice` creates correct folder structure and writes all files, (2) `validateExportTarget` detects existing presets, (3) `getAvailableCategories` reads preset subdirectories. Create `src/test/components/DeviceExport.test.tsx` for the "Send to Device" button — test disabled state when no device connected, category picker rendering, conflict warning display. Run `npm run test && npm run build` to verify.
