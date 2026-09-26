@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useModalFocus } from '../../hooks/useModalFocus';
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function RecordingModal({
   onSave, 
   maxDuration = 20 
 }: RecordingModalProps) {
+  const modalFocusRef = useRef<HTMLDivElement | null>(null);
+  useModalFocus(isOpen, modalFocusRef);
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [isRecording, setIsRecording] = useState(false);
@@ -53,8 +56,14 @@ export function RecordingModal({
         }));
       
       setDevices(audioInputs);
-      if (audioInputs.length > 0 && !selectedDeviceId) {
-        setSelectedDeviceId(audioInputs[0].deviceId);
+      // Read the current choice at call time rather than closing over it. With `[]` deps
+      // this callback captured the *initial* `selectedDeviceId` — an empty string — so
+      // every reopen of the modal silently reset the input to the first device. In a
+      // studio with an interface attached that means recording from the built-in
+      // microphone without being told. A functional update also needs no dependency,
+      // which is why this is the fix rather than adding one.
+      if (audioInputs.length > 0) {
+        setSelectedDeviceId(current => current || audioInputs[0].deviceId);
       }
     } catch (err) {
       console.error('Error getting audio devices:', err);
@@ -352,6 +361,17 @@ export function RecordingModal({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Escape closes, like every other layer. Recording is stopped by the cleanup the
+  // close path already runs, so this cannot leave a stream open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -367,11 +387,15 @@ export function RecordingModal({
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 9999,
-        fontFamily: '"Montserrat", "Arial", sans-serif'
+        fontFamily: '"Inter", "Helvetica Neue", sans-serif'
       }}
       onClick={onClose}
     >
       <div 
+        ref={modalFocusRef}
+      role="dialog"
+        aria-modal="true"
+        aria-labelledby="recording-modal-title"
         style={{
           backgroundColor: '#fff',
           borderRadius: '6px',
@@ -388,7 +412,7 @@ export function RecordingModal({
           padding: '1.5rem 1.5rem 1rem 1.5rem',
           borderBottom: '1px solid #f0f0f0'
         }}>
-          <h3 style={{
+          <h3 id="recording-modal-title" style={{
             margin: '0',
             fontSize: '1.25rem',
             fontWeight: '300',
@@ -414,16 +438,22 @@ export function RecordingModal({
         }}>
           {/* Input Device Selection */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem', 
-              fontSize: '0.9rem',
-              color: '#333',
-              fontWeight: '500'
-            }}>
+            {/* Associated with the control: an unattached label is not clickable to focus
+                and is announced separately from the thing it names. */}
+            <label
+              htmlFor="recording-input-device"
+              style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                fontSize: '0.9rem',
+                color: '#333',
+                fontWeight: '500'
+              }}
+            >
               input device
             </label>
             <select
+              id="recording-input-device"
               value={selectedDeviceId}
               onChange={(e) => setSelectedDeviceId(e.target.value)}
               disabled={isRecording}
@@ -451,16 +481,20 @@ export function RecordingModal({
 
           {/* Filename Input */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem', 
-              fontSize: '0.9rem',
-              color: '#333',
-              fontWeight: '500'
-            }}>
+            <label
+              htmlFor="recording-filename"
+              style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem', 
+                fontSize: '0.9rem',
+                color: '#333',
+                fontWeight: '500'
+              }}
+            >
               filename
             </label>
             <input
+              id="recording-filename"
               type="text"
               value={filename}
               onChange={(e) => setFilename(e.target.value)}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { InlineLoading } from '@carbon/react';
 import { useAppContext } from '../../context/AppContext';
 import { calculatePatchSize, formatFileSize, getPatchSizeWarning } from '../../utils/audio';
@@ -20,6 +20,25 @@ export function PatchSizeIndicator({ type, className = '' }: PatchSizeIndicatorP
     : state.multisampleFiles.filter(f => f && f.audioBuffer).map(f => f!.audioBuffer!);
 
   const settings = type === 'drum' ? state.drumSettings : state.multisampleSettings;
+
+  /**
+   * What the reported size depends on, as a value that changes exactly when it should.
+   *
+   * The effect below was keyed on `audioBuffers.length`, so **swapping one sample for
+   * another left the size stale** — the count had not changed. Replacing a 0.2 s hi-hat
+   * with a 15 s pad reported the old figure, and since this indicator exists to warn about
+   * the 8 MB preset limit, a kit could be pushed over that limit while still showing a
+   * safe number and no warning.
+   *
+   * Keying on the array itself is not an option: it is rebuilt by `.filter().map()` on
+   * every render, so the effect would re-run its async work every time. This is the
+   * narrower thing — `calculatePatchSize` uses each buffer's duration, sample rate and
+   * channel count, and nothing else.
+   */
+  const bufferSignature = useMemo(
+    () => audioBuffers.map(buffer => `${buffer.duration}:${buffer.sampleRate}:${buffer.numberOfChannels}`).join('|'),
+    [audioBuffers],
+  );
 
   // Calculate preset size when samples or settings change
   useEffect(() => {
@@ -46,7 +65,9 @@ export function PatchSizeIndicator({ type, className = '' }: PatchSizeIndicatorP
     };
 
     calculateSize();
-  }, [audioBuffers.length, settings.sampleRate, settings.bitDepth, settings.channels]);
+    // `bufferSignature` stands in for `audioBuffers`, whose identity changes on every
+    // render; see the comment above it.
+  }, [bufferSignature, settings.sampleRate, settings.bitDepth, settings.channels]);
 
   // Calculate percentage and get warning
   const maxSize = 8 * 1024 * 1024; // 8mb limit
@@ -75,10 +96,17 @@ export function PatchSizeIndicator({ type, className = '' }: PatchSizeIndicatorP
         }}>
           preset size estimate
         </span>
-        <span style={{ 
-          fontSize: '0.9rem',
-          color: 'var(--color-text-secondary)'
-        }}>
+        {/* The figure arrives after an async calculation and changes as samples change,
+            with nothing to announce it and no association with the label beside it.
+            `status` announces the update; the label names what the number is. */}
+        <span
+          role="status"
+          aria-label="preset size estimate"
+          style={{
+            fontSize: '0.9rem',
+            color: 'var(--color-text-secondary)'
+          }}
+        >
           {isCalculating ? (
             <InlineLoading description="Calculating..." />
           ) : (
