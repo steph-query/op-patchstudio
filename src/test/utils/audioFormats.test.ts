@@ -132,34 +132,34 @@ describe('audioFormats', () => {
   })
 
   describe('isValidAudioFile', () => {
-    it('should validate audio files by MIME type', () => {
-      const validFiles = [
+    it('accepts the containers this app can actually load', () => {
+      const valid = [
         new File([''], 'test.wav', { type: 'audio/wav' }),
         new File([''], 'test.aiff', { type: 'audio/aiff' }),
-        new File([''], 'test.mp3', { type: 'audio/mpeg' }),
-        new File([''], 'test.m4a', { type: 'audio/mp4' }),
-        new File([''], 'test.ogg', { type: 'audio/ogg' }),
-        new File([''], 'test.flac', { type: 'audio/flac' })
+        // Named, but with a type the desktop did not fill in.
+        new File([''], 'test.aif', { type: '' }),
+        new File([''], 'test.wav', { type: 'application/octet-stream' }),
+        // Typed, but with a name that says nothing.
+        new File([''], 'recording', { type: 'audio/wav' }),
       ]
 
-      validFiles.forEach(file => {
+      valid.forEach(file => {
         expect(isValidAudioFile(file)).toBe(true)
       })
     })
 
-    it('should validate audio files by extension', () => {
-      const validFiles = [
-        new File([''], 'test.wav', { type: 'application/octet-stream' }),
-        new File([''], 'test.aif', { type: 'application/octet-stream' }),
-        new File([''], 'test.aiff', { type: 'application/octet-stream' }),
-        new File([''], 'test.mp3', { type: 'application/octet-stream' }),
-        new File([''], 'test.m4a', { type: 'application/octet-stream' }),
-        new File([''], 'test.ogg', { type: 'application/octet-stream' }),
-        new File([''], 'test.flac', { type: 'application/octet-stream' })
+    it('refuses what readAudioMetadata would throw on', () => {
+      // It used to accept all of these, and had no caller in the app. Accepting an
+      // mp3 here only moved the failure to "Unsupported audio format" later on.
+      const unsupported = [
+        new File([''], 'test.mp3', { type: 'audio/mpeg' }),
+        new File([''], 'test.m4a', { type: 'audio/mp4' }),
+        new File([''], 'test.ogg', { type: 'audio/ogg' }),
+        new File([''], 'test.flac', { type: 'audio/flac' }),
       ]
 
-      validFiles.forEach(file => {
-        expect(isValidAudioFile(file)).toBe(true)
+      unsupported.forEach(file => {
+        expect(isValidAudioFile(file)).toBe(false)
       })
     })
 

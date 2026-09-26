@@ -6,6 +6,8 @@
 
 import { audioContextManager } from './audioContext';
 import { readWavMetadataFromArrayBuffer } from './audio';
+import { isReadableAudio } from './teDevices';
+import { wrapError } from './describeError';
 import { 
   parseCommChunk, 
   parseMarkChunk, 
@@ -197,7 +199,8 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
     try {
       const audioContext = await audioContextManager.getAudioContext();
       audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    } catch (decodeError) {
+    } catch (_decodeError) {
+          // The fallback below is the response, so the browser's reason is not carried.
       // Browser decode failed, fall back to manual AIF decoder
       if (ssndOffset > 0 && ssndSize > 0) {
         try {
@@ -247,7 +250,7 @@ async function parseAifMetadata(arrayBuffer: ArrayBuffer, filename: string, mapp
       rootNote: finalRootNote
     };
   } catch (error) {
-    throw new Error(`Failed to parse AIF metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw wrapError('Failed to parse AIF metadata', error);
   }
 }
 
@@ -384,7 +387,7 @@ export async function readAudioMetadata(file: File, mapping: 'C3' | 'C4' = 'C3')
     const arrayBuffer = await file.arrayBuffer();
     return await readAudioMetadataFromArrayBuffer(arrayBuffer, file.name, file.size, mapping);
   } catch (error) {
-    throw new Error(`Failed to read audio metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw wrapError('Failed to read audio metadata', error);
   }
 }
 
@@ -426,7 +429,7 @@ export async function readAudioMetadataFromArrayBuffer(
         throw new Error(`Unsupported audio format: ${format}`);
     }
   } catch (error) {
-    throw new Error(`Failed to read audio metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw wrapError('Failed to read audio metadata', error);
   }
 }
 
@@ -491,34 +494,14 @@ export async function audioBufferToWavWithMetadata(
 }
 
 // Validate audio file format
+/**
+ * Whether this app can load the file at all.
+ *
+ * The same three containers `readAudioMetadata` handles — it throws
+ * "Unsupported audio format" for anything else, so saying yes to an mp3 here only
+ * moved the failure further along. This said yes to mp3, m4a, ogg and flac and had
+ * no caller in the app, which made it a trap for whoever reached for it first.
+ */
 export function isValidAudioFile(file: File): boolean {
-  const validTypes = [
-    'audio/wav',
-    'audio/aiff',
-    'audio/aif',
-    'audio/mpeg',
-    'audio/mp3',
-    'audio/mp4',
-    'audio/ogg',
-    'audio/flac'
-  ];
-  
-  const validExtensions = [
-    '.wav',
-    '.aif',
-    '.aiff',
-    '.mp3',
-    '.m4a',
-    '.ogg',
-    '.flac'
-  ];
-  
-  // Check MIME type
-  if (validTypes.includes(file.type)) {
-    return true;
-  }
-  
-  // Check file extension
-  const extension = file.name.toLowerCase();
-  return validExtensions.some(ext => extension.endsWith(ext));
+  return isReadableAudio(file.name) || /^audio\/(wav|x-wav|wave|aiff|x-aiff)$/.test(file.type);
 } 

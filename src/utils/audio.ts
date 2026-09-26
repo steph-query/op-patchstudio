@@ -5,6 +5,7 @@ import { audioContextManager } from './audioContext';
 import { AUDIO_CONSTANTS } from './constants';
 import type { FilenameSeparator } from './constants';
 import { audioBufferToWav } from './wavExport';
+import { wrapError } from './describeError';
 
 // Constants preserved from legacy for compatibility
 const HEADER_LENGTH = 44;
@@ -41,7 +42,7 @@ export async function readWavMetadata(file: File, mapping: 'C3' | 'C4' = 'C3'): 
     const arrayBuffer = await file.arrayBuffer();
     return await readWavMetadataFromArrayBuffer(arrayBuffer, file.name, file.size, mapping);
   } catch (error) {
-    throw new Error(`Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw wrapError('Failed to read WAV metadata', error);
   }
 }
 
@@ -87,7 +88,7 @@ export async function readWavMetadataFromArrayBuffer(
       fileSize
     };
   } catch (error) {
-    throw new Error(`Failed to read WAV metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw wrapError('Failed to read WAV metadata', error);
   }
 }
 
