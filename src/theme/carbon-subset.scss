@@ -1,0 +1,50 @@
+// Only the Carbon layers and components this app actually renders.
+//
+// `main.tsx` used to import `@carbon/styles/css/styles.css`, the whole prebuilt sheet:
+// 836 KB in the bundle, declaring 3,854 `cds--` selectors of which 61 matched anything
+// on screen. That is the same shape as FontAwesome's `all.css` — a convenient import
+// that ships every component in the library because one file covers them all.
+//
+// CSS is parse-blocking, so this costs more at startup than a font of the same size.
+//
+// The app imports exactly ten things from `@carbon/react`: Button, Content,
+// InlineLoading, Modal, Select, SelectItem, Slider, TextInput, Theme and Toggle.
+// SelectItem is styled by `select`; Theme and Content come from the theme layers and
+// `ui-shell`. If another Carbon component is ever used, its stylesheet has to be added
+// here — `carbonSubset.test.ts` checks this list against the imports in source and fails
+// when they disagree, because a missing component sheet renders an unstyled control
+// rather than an error.
+
+@use '@carbon/styles/scss/reset';
+@use '@carbon/styles/scss/theme';
+@use '@carbon/styles/scss/themes';
+@use '@carbon/styles/scss/type';
+@use '@carbon/styles/scss/layer';
+@use '@carbon/styles/scss/utilities';
+@use '@carbon/styles/scss/grid';
+
+// `form` styles `.cds--form-item`, which Carbon's inputs render inside. It arrives
+// transitively through `select` and `text-input`, and is named here so the dependency
+// is visible rather than incidental.
+@use '@carbon/styles/scss/components/form';
+
+@use '@carbon/styles/scss/components/button';
+@use '@carbon/styles/scss/components/select';
+@use '@carbon/styles/scss/components/slider';
+@use '@carbon/styles/scss/components/text-input';
+@use '@carbon/styles/scss/components/toggle';
+@use '@carbon/styles/scss/components/inline-loading';
+@use '@carbon/styles/scss/components/loading';
+@use '@carbon/styles/scss/components/modal';
+@use '@carbon/styles/scss/components/ui-shell';
+
+// One rule that Carbon declares inside its **text-area** component, applying to every
+// form item rather than to text areas. This app has no text area, so the whole component
+// sheet would be a heavy way to get a single declaration — but dropping it is a real
+// change: `position: relative` on a form item is what absolutely-positioned descendants
+// anchor to. Diffing computed styles against the full sheet is the only reason this was
+// noticed; nothing errors and nothing throws, the layout simply resolves against a
+// different ancestor.
+.cds--form-item {
+  position: relative;
+}

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@carbon/styles/css/styles.css'
+import './theme/carbon-subset.scss'
 import './index.css'
 import App from './App.tsx'
 
