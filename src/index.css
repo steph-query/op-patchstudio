@@ -1,612 +1,99 @@
-/* Global styles for OPXY Tools React app */
-/* Preserving the OP-XY monochrome aesthetic */
+/* Only the icon styles this app uses.
+ *
+ * `all.css` declares four families — solid, regular, brands and a v4 compatibility
+ * shim — and Vite bundles a woff2 and a ttf for each, whether or not an icon from
+ * that family appears anywhere. That was 1.00 MB of webfonts in a 3.56 MB frontend,
+ * 438 KB of it for families nothing renders. Every icon this app draws is a solid one:
+ * the only brands icon in the codebase is a Patreon logo on `DonatePage`, which is
+ * imported by nothing and unreachable, and no `far` icon appears in any className.
+ *
+ * If a brands icon (`fab fa-…`) is ever wanted, add `brands.css` here as well —
+ * without it the glyph renders as an empty box rather than failing loudly. */
+@import '@fortawesome/fontawesome-free/css/fontawesome.css';
+@import '@fortawesome/fontawesome-free/css/solid.css';
 
-/* Import Font Awesome */
-@import '@fortawesome/fontawesome-free/css/all.css';
-
-/* Embed Nimbus Sans L font (Helvetica alternative) */
-@font-face {
-  font-family: 'NimbusSansL';
-  src: url('/assets/NimbusSanL-Reg-webfont.woff') format('woff');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-:root {
-  font-family: "Montserrat", "Arial", sans-serif;
-  line-height: 1.7;
-  font-weight: 400;
-  
-  color-scheme: light;
+:root { font-family: var(--font-ui); color-scheme: light; color: var(--color-text-primary); background: var(--color-bg-body); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; font-size: 14px; line-height: 1.6; }
+#root { min-height: 100vh; width: 100%; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+input, select, textarea { accent-color: var(--color-interactive-primary); }
+a { color: var(--color-interactive-primary); text-underline-offset: 3px; }
+a:hover { color: var(--color-accent-primary); }
+:focus-visible { outline: 2px solid var(--color-accent-primary) !important; outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.studio-shell { min-height: 100vh; background: var(--color-bg-body); border-top: 4px solid #26332c; }
+.studio-content.cds--content { width: 100%; max-width: 1480px; padding: 24px 36px; margin: 0 auto; background: transparent; }
+.studio-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 4px 0 28px; }
+.brand-lockup { display: flex; align-items: center; gap: 13px; }
+.brand-lockup img { flex: none; }
+.brand-lockup h1 { margin: 0; font: 680 31px/1.05 var(--font-ui); letter-spacing: -.065em; color: var(--color-text-primary); }
+.brand-period { color: var(--color-accent-primary); }
+.brand-lockup p { margin: 6px 0 0; font: 11px/1.4 var(--font-ui); color: var(--color-text-secondary); letter-spacing: .02em; }
+.studio-roster { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+.device-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid var(--color-border-secondary); border-radius: 30px; font: 10px/1.2 var(--font-mono); letter-spacing: .035em; color: var(--color-text-secondary); }
+.signal-dot { width: 5px; height: 5px; border-radius: 50%; background: #9aa593; flex: none; }
+.device-badge.is-connected { background: #2d4638; color: #fffefa; border-color: #2d4638; }
+.is-connected .signal-dot { background: #c9ea9c; box-shadow: 0 0 0 3px #ffffff15; }
+.studio-edition { display: block; width: 100%; text-align: right; font: 9px/1.4 var(--font-mono); letter-spacing: .12em; color: var(--color-text-tertiary); margin-top: 3px; }
+.studio-workspace { min-width: 0; }
+.tab-bar { display: flex; gap: 5px; padding: 10px; background: #26332c; border-radius: var(--radius-panel) var(--radius-panel) 0 0; overflow-x: auto; scrollbar-width: thin; }
+.tab-bar button { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 9px 16px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #c9d2c7; font: 550 12px/1.3 var(--font-ui); transition: background .15s, color .15s; }
+.tab-bar button:hover { background: #ffffff12; color: #fffefa; }
+.tab-bar button[aria-selected=true] { background: #fffefa; color: #26332c; box-shadow: 0 2px 4px #0002; }
+.tab-bar button[aria-selected=true] .tab-symbol { color: var(--color-accent-primary); }
+.tab-symbol { font: 19px/1 var(--font-mono); }
+.tab-bar small { font: 9px var(--font-mono); border: 1px solid currentColor; border-radius: 3px; padding: 1px 3px; }
+.studio-footer { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 6px 0 16px; color: var(--color-text-tertiary); font: 10px/1.6 var(--font-mono); }
+.footer-separator { padding: 0 8px; color: var(--color-border-primary); }
+.container { max-width: 100%; margin: auto; padding: 0 1rem; }
+.cds--label, .cds--text-input__label-text, .cds--list-box__label { color: var(--color-text-secondary); font-size: 12px; }
+/* A slider's label is the only thing that can name it: Carbon points the control's
+   `aria-labelledby` at an element it renders from `labelText`, and overrides `htmlFor`,
+   `aria-label` and `aria-labelledby` passed to the component (measured, not assumed).
+   These rows previously used a separate `<label>` for appearance, which left the sliders
+   with no accessible name at all. Moving the text into `labelText` fixes the name; this
+   rule keeps the appearance the separate label had, so nothing moves. */
+.cds--label:has(+ .cds--slider-container) {
   color: var(--color-text-primary);
-  background-color: var(--color-bg-primary);
-  
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  background: var(--color-bg-body);
-  color: var(--color-text-primary);
-  font-size: 0.98rem;
-  letter-spacing: 0.01em;
-  line-height: 1.7;
-}
-
-#root {
-  min-height: 100vh;
-  width: 100%;
-}
-
-/* Preserve legacy link styling */
-a {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-}
-
-a:hover {
-  color: var(--color-text-primary);
-}
-
-/* Override Carbon defaults for OP-XY aesthetic */
-.cds--content {
-  background: var(--color-bg-body);
-}
-
-/* Make Carbon Design label text larger to match preset size text */
-.cds--label,
-.cds--text-input__label-text,
-.cds--list-box__label {
-  font-size: 0.9rem !important;
-  font-weight: 500 !important;
-}
-
-/* Override Carbon Design slider colors */
-.cds--slider__track {
-  background-color: var(--color-bg-slider-track) !important;
-}
-
-.cds--slider__filled-track {
-  background-color: var(--color-interactive-secondary) !important;
-}
-
-.cds--slider__thumb {
-  background-color: var(--color-interactive-dark) !important;
-  border: 2px solid var(--color-interactive-dark) !important;
-}
-
-.cds--slider__thumb:hover {
-  background-color: var(--color-interactive-focus) !important;
-  border-color: var(--color-interactive-focus) !important;
-}
-
-.cds--slider__thumb:focus {
-  background-color: var(--color-interactive-focus) !important;
-  border-color: var(--color-interactive-focus) !important;
-  box-shadow: 0 0 0 2px var(--color-interactive-focus-ring) !important;
-}
-
-.cds--slider__thumb:active {
-  background-color: var(--color-interactive-focus) !important;
-  border-color: var(--color-interactive-focus) !important;
-}
-
-/* Global Carbon Design System monochrome overrides */
-.cds--toggle-input__appearance {
-  background-color: var(--color-bg-slider-track) !important;
-}
-
-.cds--toggle-input__appearance:before {
-  background-color: var(--color-interactive-secondary) !important;
-}
-
-.cds--toggle-input:checked + .cds--toggle-input__appearance {
-  background-color: var(--color-interactive-dark) !important;
-}
-
-.cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-  background-color: var(--color-white) !important;
-}
-
-.cds--toggle__text--off,
-.cds--toggle__text--on {
-  color: var(--color-interactive-secondary) !important;
-}
-
-/* Specific override for multisample loop enabled toggle */
-#multisample-loop-enabled .cds--toggle-input__appearance {
-  background-color: var(--color-bg-slider-track) !important;
-}
-
-#multisample-loop-enabled .cds--toggle-input__appearance:before {
-  background-color: var(--color-interactive-secondary) !important;
-}
-
-#multisample-loop-enabled .cds--toggle-input:checked + .cds--toggle-input__appearance {
-  background-color: var(--color-interactive-dark) !important;
-}
-
-#multisample-loop-enabled .cds--toggle-input:checked + .cds--toggle-input__appearance:before {
-  background-color: var(--color-white) !important;
-}
-
-#multisample-loop-enabled .cds--toggle__text--off,
-#multisample-loop-enabled .cds--toggle__text--on {
-  color: var(--color-interactive-secondary) !important;
-}
-
-/* Additional overrides just for the multisample loop enabled toggle */
-#multisample-loop-enabled + .cds--toggle-input__appearance {
-  background-color: var(--color-bg-slider-track) !important;
-  border-color: var(--color-bg-slider-track) !important;
-}
-
-#multisample-loop-enabled + .cds--toggle-input__appearance:before {
-  background-color: var(--color-interactive-secondary) !important;
-}
-
-#multisample-loop-enabled:checked + .cds--toggle-input__appearance {
-  background-color: var(--color-interactive-dark) !important;
-  border-color: var(--color-interactive-dark) !important;
-}
-
-#multisample-loop-enabled:checked + .cds--toggle-input__appearance:before {
-  background-color: var(--color-white) !important;
-}
-
-#multisample-loop-enabled:focus-visible + .cds--toggle-input__appearance {
-  outline: 2px solid var(--color-interactive-dark) !important;
-}
-
-/* Ensure proper spacing and layout */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Ensure main content doesn't become too wide on desktop screens */
-@media (min-width: 1200px) {
-  .cds--content {
-    max-width: 1000px !important;
-    margin: 0 auto !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* Ensure tables and data displays don't become too wide on desktop screens */
-@media (min-width: 1200px) {
-  /* Table containers */
-  div[style*="borderRadius: '15px'"] {
-    max-width: 100% !important;
-    overflow-x: auto !important;
-  }
-  
-  /* Ensure table content doesn't overflow */
-  table {
-    max-width: 100% !important;
-    table-layout: auto !important;
-  }
-  
-  /* Grid layouts should respect container width */
-  div[style*="display: grid"] {
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-  }
-}
-
-/* Prevent horizontal overflow on all containers */
-* {
-  box-sizing: border-box;
-}
-
-body {
-  overflow-x: hidden;
-}
-
-/* Responsive grid for drum preset settings */
-.drum-preset-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4rem;
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  .drum-preset-grid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .drum-preset-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-}
-
-/* Carbon Design System dropdown styling */
-.cds--dropdown,
-.cds--list-box {
-  max-width: 180px !important;
-  min-width: 120px !important;
-}
-
-/* Slider container improvements for better usability */
-.cds--slider-container {
-  margin-bottom: 1rem !important;
-}
-
-/* Ensure sliders have adequate width according to UI best practices */
-.cds--slider {
-  min-width: 240px !important;
-  max-width: 100% !important;
-}
-
-/* Mobile responsive slider adjustments */
-@media (max-width: 768px) {
-  .cds--slider {
-    min-width: 180px !important;
-    max-width: 100% !important;
-  }
-  
-  .cds--toggle {
-    font-size: 0.8rem !important;
-  }
-
-  /* More subtle centering for form containers only */
-  div[style*="maxWidth: 150px"] {
-    margin: 0 auto !important;
-  }
-
-  /* Center only the slider containers when they're in grid layouts */
-  div[style*="display: grid"] > div {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .cds--slider {
-    min-width: 140px !important;
-    max-width: 100% !important;
-  }
-  
-  .cds--toggle {
-    font-size: 0.75rem !important;
-  }
-  
-  .cds--toggle__text--off,
-  .cds--toggle__text--on {
-    font-size: 0.7rem !important;
-  }
-
-  /* Keep the subtle centering for very small screens */
-  div[style*="maxWidth: 150px"] {
-    margin: 0 auto !important;
-  }
-}
-
-/* Value labels for sliders */
-.cds--slider__range-label {
-  font-size: 0.75rem !important;
-  color: var(--color-interactive-secondary) !important;
-  min-width: 2rem !important;
-  text-align: center !important;
-}
-
-/* Numeric input styling - properly sized for values */
-.cds--text-input {
-  max-width: 80px !important;
-  text-align: center !important;
-}
-
-/* Debug utilities for responsive development - remove in production */
-/* Uncomment these classes during development to debug mobile layouts */
-/*
-.debug-mobile {
-  border: 2px solid red !important;
-  box-sizing: border-box !important;
-}
-
-.debug-mobile::before {
-  content: attr(class);
-  position: absolute;
-  top: -20px;
-  left: 0;
-  background: red;
-  color: white;
-  font-size: 10px;
-  padding: 2px 4px;
-  z-index: 1000;
-}
-
-.debug-overflow {
-  outline: 2px dashed orange !important;
-  background: rgba(255, 165, 0, 0.1) !important;
-}
-
-@media (max-width: 768px) {
-  .debug-mobile-tablet {
-    border: 2px solid blue !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .debug-mobile-phone {
-    border: 2px solid green !important;
-  }
-}
-*/
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
-/* Custom Portal-based Tooltip Styles */
-.custom-tooltip-content {
-  padding: 8px 12px;
-  background: rgba(51, 51, 51, 0.95);
-  color: white;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: normal;
-  line-height: 1.4;
-  white-space: pre-line;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: max-content;
-  max-width: 300px;
-}
-
-.custom-tooltip-arrow {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -5px;
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid rgba(51, 51, 51, 0.95);
-}
-
-/* Enhanced Tooltip Styles - Merges dark styling with better layout */
-.enhanced-tooltip-content {
-  padding: 12px 16px;
-  background: rgba(51, 51, 51, 0.95);
-  color: white;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: normal;
-  line-height: 1.4;
-  white-space: normal;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: max-content;
-  max-width: 300px;
-}
-
-.enhanced-tooltip-content h1,
-.enhanced-tooltip-content h2,
-.enhanced-tooltip-content h3,
-.enhanced-tooltip-content h4,
-.enhanced-tooltip-content h5,
-.enhanced-tooltip-content h6 {
-  margin: 0 0 8px 0;
-  font-weight: 300;
-  color: white;
-  font-size: 1.25rem;
-}
-
-.enhanced-tooltip-content p {
-  margin: 0 0 8px 0;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.enhanced-tooltip-content p:last-child {
-  margin-bottom: 0;
-}
-
-.enhanced-tooltip-content i {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.enhanced-tooltip-arrow {
-  display: none;
-}
-
-/* Hide focus outline for mouse users, keep for keyboard users (accessibility best practice) */
-:focus {
-  outline: none;
-}
-:focus-visible {
-  outline: 2px solid var(--color-interactive-focus);
-  outline-offset: 2px;
-}
-
-/* Remove thick border from selected/focused tab and keep subtle focus ring for keyboard users */
-[role="tab"][aria-selected="true"],
-[role="tab"]:focus {
-  border-color: var(--color-border-subtle) var(--color-border-subtle) var(--color-bg-primary) !important;
-  box-shadow: none !important;
-}
-[role="tab"]:focus:not(:focus-visible) {
-  border-color: var(--color-border-subtle) var(--color-border-subtle) var(--color-bg-primary) !important;
-  box-shadow: none !important;
-}
-[role="tab"]:focus-visible {
-  outline: 2px solid var(--color-interactive-focus);
-  outline-offset: 2px;
-}
-
-/* Force Carbon slider to fill parent width */
-.full-width-slider,
-.full-width-slider .cds--slider,
-.full-width-slider .cds--slider__track,
-.full-width-slider .cds--slider-container {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box;
-}
-
-/* Mobile modal improvements */
-@media (max-width: 768px) {
-  /* Ensure modals are properly sized on mobile */
-  div[style*="position: fixed"][style*="z-index: 1050"] {
-    padding: 0.5rem !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-  
-  /* Specific improvements for drum sample settings modal */
-  .drum-sample-settings-modal {
-    width: 95% !important;
-    max-width: 95% !important;
-    max-height: calc(100vh - 1rem) !important;
-    margin: 0 !important;
-  }
-  
-  div[style*="position: fixed"][style*="z-index: 1050"] > div {
-    width: 100% !important;
-    max-width: 100% !important;
-    max-height: calc(100vh - 1rem) !important;
-    margin: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  
-  /* Improve button layout in modal footers */
-  div[style*="justify-content: flex-end"][style*="gap: 0.5rem"] {
-    gap: 0.5rem !important;
-    padding: 0.75rem 1rem 1rem 1rem !important;
-  }
-  
-  div[style*="justify-content: flex-end"][style*="gap: 0.5rem"] button {
-    padding: 0.5rem 1rem !important;
-    font-size: 0.8rem !important;
-    min-width: 70px !important;
-  }
-  
-  /* Improve form layout in modals */
-  div[style*="display: flex"][style*="align-items: center"][style*="flex-wrap: wrap"] {
-    gap: 0.5rem !important;
-  }
-  
-  div[style*="display: flex"][style*="align-items: center"][style*="flex-wrap: wrap"] label {
-    min-width: 80px !important;
-    font-size: 0.85rem !important;
-  }
-  
-  div[style*="display: flex"][style*="align-items: center"][style*="flex-wrap: wrap"] select {
-    min-width: 180px !important;
-    font-size: 0.85rem !important;
-  }
-  
-  /* Ensure waveform containers scale properly on tablets */
-  .drum-sample-settings-modal canvas {
-    width: 100% !important;
-    height: auto !important;
-    max-width: 100% !important;
-  }
-  
-  /* Improve waveform container responsiveness */
-  .drum-sample-settings-modal div[style*="position: relative"][style*="margin-bottom: 1rem"] {
-    width: 100% !important;
-    overflow: hidden !important;
-  }
-}
-
-@media (max-width: 480px) {
-  /* Further adjustments for very small screens */
-  div[style*="position: fixed"][style*="z-index: 1050"] {
-    padding: 0.25rem !important;
-  }
-  
-  /* Specific improvements for drum sample settings modal on very small screens */
-  .drum-sample-settings-modal {
-    width: 98% !important;
-    max-width: 98% !important;
-    max-height: calc(100vh - 0.5rem) !important;
-    margin: 0 !important;
-    border-radius: 12px !important;
-  }
-  
-  div[style*="position: fixed"][style*="z-index: 1050"] > div {
-    max-height: calc(100vh - 0.5rem) !important;
-    border-radius: 12px !important;
-  }
-  
-  /* Reduce padding in modal body for more space */
-  div[style*="padding: 1rem"][style*="background: var(--color-bg-primary)"] {
-    padding: 0.75rem !important;
-  }
-  
-  /* Make buttons more compact */
-  div[style*="justify-content: flex-end"][style*="gap: 0.5rem"] button {
-    padding: 0.4rem 0.8rem !important;
-    font-size: 0.75rem !important;
-    min-width: 60px !important;
-  }
-  
-  /* Adjust form elements for very small screens */
-  div[style*="display: flex"][style*="align-items: center"][style*="flex-wrap: wrap"] label {
-    min-width: 70px !important;
-    font-size: 0.8rem !important;
-  }
-  
-  div[style*="display: flex"][style*="align-items: center"][style*="flex-wrap: wrap"] select {
-    min-width: 150px !important;
-    font-size: 0.8rem !important;
-  }
-  
-  /* Ensure waveform containers scale properly on mobile */
-  .drum-sample-settings-modal canvas {
-    width: 100% !important;
-    height: auto !important;
-    max-width: 100% !important;
-  }
-  
-  /* Improve waveform container responsiveness */
-  .drum-sample-settings-modal div[style*="position: relative"][style*="margin-bottom: 1rem"] {
-    width: 100% !important;
-    overflow: hidden !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .tab-bar {
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .tab-bar::-webkit-scrollbar {
-    display: none;
-  }
-  .tab-bar > button {
-    flex: 0 0 auto;
-    min-width: 44px;
-  }
-}
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.cds--text-input, .cds--list-box, .cds--number input[type=number] { border-radius: var(--radius-control); }
+.cds--slider__filled-track, .cds--slider__thumb { background-color: var(--color-interactive-primary) !important; }
+.cds--slider__track { background: var(--color-border-subtle) !important; }
+.cds--slider__range-label { color: var(--color-text-secondary); font: 10px var(--font-mono); }
+.cds--slider { max-width: 100%; }
+.cds--btn { border-radius: var(--radius-control); }
+.cds--toggle-input:checked + .cds--toggle-input__appearance { background: var(--color-interactive-primary); }
+.drum-preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; width: 100%; }
+.full-width-slider, .full-width-slider .cds--slider, .full-width-slider .cds--slider__track, .full-width-slider .cds--slider-container { width: 100% !important; min-width: 0 !important; max-width: 100% !important; }
+.hide-scrollbar { scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.custom-tooltip-content, .enhanced-tooltip-content { padding: 10px 14px; background: #26332c; color: #fffefa; border-radius: 8px; font: 12px/1.6 var(--font-ui); white-space: pre-line; width: max-content; max-width: min(320px, 90vw); box-shadow: 0 6px 24px var(--shadow-medium); }
+.enhanced-tooltip-content { white-space: normal; }
+.enhanced-tooltip-content p { margin: 0 0 8px; color: inherit; }
+.enhanced-tooltip-content h1, .enhanced-tooltip-content h2, .enhanced-tooltip-content h3 { margin: 0 0 8px; font-size: 16px; color: inherit; }
+.custom-tooltip-arrow, .enhanced-tooltip-arrow { display: none; }
+.app-block-overlay { position: fixed; inset: 0; z-index: 20000; display: flex; align-items: center; justify-content: center; background: var(--shadow-overlay); }
+@media(max-width: 900px) {
+  .studio-content.cds--content { padding: 20px; }
+  .studio-header { align-items: flex-start; gap: 16px; }
+  .studio-roster { max-width: 260px; }
+  .studio-edition { display: none; }
+  .tab-bar button { padding: 9px 12px; }
+}
+@media(max-width: 600px) {
+  .studio-content.cds--content { padding: 16px 10px; }
+  .studio-header { flex-direction: column; padding: 2px 4px 20px; }
+  .studio-roster { max-width: none; justify-content: flex-start; gap: 6px; }
+  .brand-lockup h1 { font-size: 29px; }
+  .studio-footer { font-size: 9px; padding: 4px; }
+  .drum-preset-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  .drum-sample-settings-modal { max-width: 96vw !important; max-height: 92vh !important; }
+}
+@media(prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

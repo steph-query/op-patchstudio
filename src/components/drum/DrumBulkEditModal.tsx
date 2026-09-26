@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
+import { useModalFocus } from '../../hooks/useModalFocus';
 
 interface DrumBulkEditModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ interface BulkSettings {
 }
 
 export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
+  const modalFocusRef = useRef<HTMLDivElement | null>(null);
+  useModalFocus(isOpen, modalFocusRef);
   const { state, dispatch } = useAppContext();
   
   const [settings, setSettings] = useState<BulkSettings>({
@@ -67,6 +70,16 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
     onClose();
   };
 
+  // Escape closes, like every other layer.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -82,7 +95,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1050,
-        fontFamily: '"Montserrat", "Arial", sans-serif'
+        fontFamily: '"Inter", "Helvetica Neue", sans-serif'
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -90,7 +103,8 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
         }
       }}
     >
-      <div style={{
+      <div ref={modalFocusRef}
+      role="dialog" aria-modal="true" aria-labelledby="bulk-edit-title" style={{
         backgroundColor: '#fff',
         borderRadius: '8px',
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
@@ -108,7 +122,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             color: '#222',
             fontSize: '1.25rem',
             fontWeight: '300'
-          }}>bulk edit samples</h3>
+          }} id="bulk-edit-title">bulk edit samples</h3>
         </div>
         <div style={{ padding: '2rem' }}>
           <div 
@@ -127,7 +141,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
 
           {/* Playmode */}
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ 
+            <label htmlFor="bulk-playmode" style={{ 
               display: 'block',
               marginBottom: '0.5rem',
               fontSize: '0.875rem',
@@ -136,7 +150,8 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             }}>
               playmode
             </label>
-            <select 
+            <select
+              id="bulk-playmode" 
               style={{ 
                 width: '100%',
                 padding: '0.75rem',
@@ -159,7 +174,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
 
           {/* Direction */}
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ 
+            <label htmlFor="bulk-direction" style={{ 
               display: 'block',
               marginBottom: '0.5rem',
               fontSize: '0.875rem',
@@ -168,7 +183,8 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             }}>
               direction
             </label>
-            <select 
+            <select
+              id="bulk-direction" 
               style={{ 
                 width: '100%',
                 padding: '0.75rem',
@@ -189,7 +205,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
 
           {/* Transpose */}
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ 
+            <label htmlFor="bulk-transpose" style={{ 
               display: 'block',
               marginBottom: '0.5rem',
               fontSize: '0.875rem',
@@ -198,6 +214,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             }}>transpose (semitones)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <input
+              id="bulk-transpose"
                 type="range"
                 min="-48"
                 max="48"
@@ -239,7 +256,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
 
           {/* Gain */}
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ 
+            <label htmlFor="bulk-gain" style={{ 
               display: 'block',
               marginBottom: '0.5rem',
               fontSize: '0.875rem',
@@ -248,6 +265,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             }}>gain (db)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <input
+              id="bulk-gain"
                 type="range"
                 min="-30"
                 max="20"
@@ -289,7 +307,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
 
           {/* Pan */}
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ 
+            <label htmlFor="bulk-pan" style={{ 
               display: 'block',
               marginBottom: '0.5rem',
               fontSize: '0.875rem',
@@ -298,6 +316,7 @@ export function DrumBulkEditModal({ isOpen, onClose }: DrumBulkEditModalProps) {
             }}>pan</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <input
+              id="bulk-pan"
                 type="range"
                 min="-100"
                 max="100"

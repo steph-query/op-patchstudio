@@ -461,7 +461,20 @@ export function MultisamplePresetSettings() {
           }}>
             {/* Header */}
             <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedSections.basic}
               onClick={() => toggleSection('basic')}
+              onKeyDown={event => {
+                // The header was a bare `<div onClick>`: not focusable, not announced as
+                // interactive, and impossible to activate from the keyboard. With `sound`
+                // collapsed by default that made six sliders and three selects
+                // keyboard-unreachable entirely.
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  toggleSection('basic');
+                }
+              }}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -509,7 +522,7 @@ export function MultisamplePresetSettings() {
                     alignItems: isMobile ? 'center' : 'flex-start',
                     textAlign: isMobile ? 'center' : 'left'
                   }}>
-                    <label style={{ 
+                    <label htmlFor="playmode" style={{ 
                       display: 'block',
                       marginBottom: '0.5rem',
                       fontWeight: '500',
@@ -539,7 +552,7 @@ export function MultisamplePresetSettings() {
                     alignItems: isMobile ? 'center' : 'flex-start',
                     textAlign: isMobile ? 'center' : 'left'
                   }}>
-                    <label style={{ 
+                    <label htmlFor="multisample-loop-enabled" style={{ 
                       display: 'block',
                       marginBottom: '0.5rem',
                       fontWeight: '500',
@@ -551,6 +564,7 @@ export function MultisamplePresetSettings() {
                     <div style={{ padding: '4px' }}>
                       <Toggle
                         id="multisample-loop-enabled"
+                      aria-label="loop enabled"
                         labelA="off"
                         labelB="on"
                         toggled={settings.loopEnabled}
@@ -566,7 +580,7 @@ export function MultisamplePresetSettings() {
                     alignItems: isMobile ? 'center' : 'flex-start',
                     textAlign: isMobile ? 'center' : 'left'
                   }}>
-                    <label style={{ 
+                    <label htmlFor="multisample-loop-onrelease" style={{ 
                       display: 'block',
                       marginBottom: '0.5rem',
                       fontWeight: '500',
@@ -578,6 +592,7 @@ export function MultisamplePresetSettings() {
                     <div style={{ padding: '4px' }}>
                       <Toggle
                         id="multisample-loop-onrelease"
+                      aria-label="loop on release"
                         labelA="off"
                         labelB="on"
                         toggled={settings.loopOnRelease}
@@ -601,7 +616,20 @@ export function MultisamplePresetSettings() {
           }}>
             {/* Header */}
             <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedSections.sound}
               onClick={() => toggleSection('sound')}
+              onKeyDown={event => {
+                // The header was a bare `<div onClick>`: not focusable, not announced as
+                // interactive, and impossible to activate from the keyboard. With `sound`
+                // collapsed by default that made six sliders and three selects
+                // keyboard-unreachable entirely.
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  toggleSection('sound');
+                }
+              }}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -650,7 +678,7 @@ export function MultisamplePresetSettings() {
                 {/* Row 1: Tuning root + Transpose */}
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>tuning root</label>
+                    <label htmlFor="tuning-root" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>tuning root</label>
                     <div style={{ maxWidth: '150px' }}>
                       <Select
                         id="tuning-root"
@@ -666,8 +694,8 @@ export function MultisamplePresetSettings() {
                     </div>
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>transpose: {settings.transpose}</label>
                     <Slider
+                      labelText={`transpose: ${settings.transpose}`}
                       id="multisample-transpose"
                       min={-36}
                       max={36}
@@ -682,8 +710,8 @@ export function MultisamplePresetSettings() {
                 {/* Row 2: Width + Highpass */}
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>width: {settings.width}%</label>
                     <Slider
+                      labelText={`width: ${settings.width}%`}
                       id="multisample-width"
                       min={0}
                       max={100}
@@ -694,8 +722,8 @@ export function MultisamplePresetSettings() {
                     />
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>highpass: {settings.highpass}%</label>
                     <Slider
+                      labelText={`highpass: ${settings.highpass}%`}
                       id="multisample-highpass"
                       min={0}
                       max={100}
@@ -710,8 +738,8 @@ export function MultisamplePresetSettings() {
                 {/* Row 3: Velocity Sensitivity + Volume */}
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>velocity sensitivity: {settings.velocitySensitivity}%</label>
                     <Slider
+                      labelText={`velocity sensitivity: ${settings.velocitySensitivity}%`}
                       id="multisample-velocity-sensitivity"
                       min={0}
                       max={100}
@@ -722,8 +750,8 @@ export function MultisamplePresetSettings() {
                     />
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>volume: {settings.volume}%</label>
                     <Slider
+                      labelText={`volume: ${settings.volume}%`}
                       id="multisample-volume"
                       min={0}
                       max={100}
@@ -738,7 +766,7 @@ export function MultisamplePresetSettings() {
                 {/* Row 4: Portamento Type + Amount */}
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '2rem', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento type</label>
+                    <label htmlFor="portamento-type" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento type</label>
                     <div style={{ maxWidth: '150px' }}>
                       <Select
                         id="portamento-type"
@@ -753,8 +781,8 @@ export function MultisamplePresetSettings() {
                     </div>
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingLeft: isMobile ? 0 : '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>portamento amount: {settings.portamentoAmount}%</label>
                     <Slider
+                      labelText={`portamento amount: ${settings.portamentoAmount}%`}
                       id="multisample-portamento-amount"
                       min={0}
                       max={100}
@@ -779,7 +807,20 @@ export function MultisamplePresetSettings() {
           }}>
             {/* Header */}
             <div
+              role="button"
+              tabIndex={0}
+              aria-expanded={expandedSections.envelopes}
               onClick={() => toggleSection('envelopes')}
+              onKeyDown={event => {
+                // The header was a bare `<div onClick>`: not focusable, not announced as
+                // interactive, and impossible to activate from the keyboard. With `sound`
+                // collapsed by default that made six sliders and three selects
+                // keyboard-unreachable entirely.
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  toggleSection('envelopes');
+                }
+              }}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',

@@ -33,7 +33,19 @@ export function ToggleSwitch({
       }}>
         {leftLabel}
       </span>
-      <div 
+      {/* A real control, not a styled div.
+          This was a `<div onClick>` with no role, tabIndex or key handler: unreachable by
+          Tab, not announced as interactive, and impossible to activate from the keyboard.
+          It sets the export audio format (wav/aiff) and the MIDI note mapping (c3/c4) —
+          two settings a keyboard user simply could not change. `role="switch"` with
+          `aria-checked` is what this shape already was; the button's own defaults are
+          reset so nothing moves. */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isRight}
+        aria-label={`${leftLabel} or ${rightLabel}`}
+        disabled={disabled}
         onClick={disabled ? undefined : onToggle}
         style={{
           width: '32px',
@@ -43,7 +55,13 @@ export function ToggleSwitch({
           position: 'relative',
           cursor: disabled ? 'default' : 'pointer',
           transition: 'all 0.2s ease',
-          opacity: disabled ? 0.5 : 1
+          opacity: disabled ? 0.5 : 1,
+          padding: 0,
+          border: 0,
+          margin: 0,
+          appearance: 'none',
+          font: 'inherit',
+          flex: 'none'
         }}
       >
         <div
@@ -59,7 +77,7 @@ export function ToggleSwitch({
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
           }}
         />
-      </div>
+      </button>
       <span style={{ 
         fontSize: '0.875rem', 
         fontWeight: 400,

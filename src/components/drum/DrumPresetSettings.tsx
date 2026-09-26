@@ -192,7 +192,7 @@ export function DrumPresetSettings() {
             gap: '1rem',
             alignItems: 'center'
           }}>
-            <label style={{
+            <label htmlFor="preset-playmode" style={{
               fontSize: '0.875rem',
               fontWeight: '500',
               color: 'var(--color-text-primary)'

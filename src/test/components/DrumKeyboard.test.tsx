@@ -1,49 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { DrumKeyboard } from '../../components/drum/DrumKeyboard';
+import { drumKeyMap } from '../../utils/drumKeyMap';
 import { AppContextProvider } from '../../context/AppContext';
 
-// Import the drumKeyMap to test the mapping directly
-const drumKeyMap = [
-  // Lower octave (octave 0)
-  {
-    W: { label: "KD2", idx: 1 },
-    E: { label: "SD2", idx: 3 },
-    R: { label: "CLP", idx: 5 },
-    Y: { label: "CH", idx: 8 },
-    U: { label: "OH", idx: 10 },
-    A: { label: "KD1", idx: 0 },
-    S: { label: "SD1", idx: 2 },
-    D: { label: "RIM", idx: 4 },
-    F: { label: "TB", idx: 6 },
-    G: { label: "SH", idx: 7 },
-    H: { label: "CL", idx: 9 },
-    J: { label: "CAB", idx: 11 },
-  },
-  // Upper octave (octave 1)
-  {
-    W: { label: "RC", idx: 13 },
-    E: { label: "CC", idx: 15 },
-    R: { label: "COW", idx: 17 },
-    Y: { label: "LC", idx: 20 },
-    U: { label: "HC", idx: 22 },
-    A: { label: "LT1", idx: 12 },
-    S: { label: "MT", idx: 14 },
-    D: { label: "HT", idx: 16 },
-    F: { label: "TRI", idx: 18 },
-    G: { label: "LT2", idx: 19 },
-    H: { label: "WS", idx: 21 },
-    J: { label: "GUI", idx: 23 },
-  },
-];
-
+/**
+ * These tests used to declare their own copy of `drumKeyMap` and assert facts about
+ * that literal — twelve assertions that could not fail whatever the component did.
+ * They read the real mapping now.
+ */
 describe('DrumKeyboard', () => {
-  it('should render without crashing', () => {
-    render(
+  it('should render the pads, not merely avoid throwing', () => {
+    const { container } = render(
       <AppContextProvider>
         <DrumKeyboard />
       </AppContextProvider>
     );
+    // A render that throws fails either way; this also says something arrived.
+    expect(container).not.toBeEmptyDOMElement();
+    expect(screen.getAllByText('A').length).toBeGreaterThan(0);
   });
 
   it('should have correct drum key mapping for G key in octave 1', () => {

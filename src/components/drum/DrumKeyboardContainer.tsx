@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isReadableAudio } from '../../utils/teDevices';
 import { useAppContext } from '../../context/AppContext';
 import { DrumKeyboard } from './DrumKeyboard';
 import { EnhancedTooltip } from '../common/EnhancedTooltip';
@@ -293,7 +294,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                     fontSize: '0.875rem',
                     color: 'var(--color-white)',
                     transition: 'all 0.2s ease',
-                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontFamily: '"Inter", "Helvetica Neue", sans-serif',
                     fontWeight: 500,
                     minHeight: '32px',
                   }}
@@ -335,7 +336,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                     fontSize: '0.875rem',
                     color: 'var(--color-white)',
                     transition: 'all 0.2s ease',
-                    fontFamily: '"Montserrat", "Arial", sans-serif',
+                    fontFamily: '"Inter", "Helvetica Neue", sans-serif',
                     fontWeight: 500,
                     minHeight: '32px'
                   }}
@@ -449,7 +450,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                 e.currentTarget.style.backgroundColor = 'transparent';
 
                 const files = Array.from(e.dataTransfer.files).filter(
-                  (file) => file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                  (file) => isReadableAudio(file.name) || file.type.startsWith('audio/')
                 );
 
                 // White key indices for both octaves (A, S, D, F, G, H, J)
@@ -529,7 +530,7 @@ export const DrumKeyboardContainer: React.FC<DrumKeyboardContainerProps> = ({ on
                 e.currentTarget.style.backgroundColor = 'transparent';
 
                 const files = Array.from(e.dataTransfer.files).filter(
-                  (file) => file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
+                  (file) => isReadableAudio(file.name) || file.type.startsWith('audio/')
                 );
 
                 // Black key indices for both octaves (W, E, R, Y, U)

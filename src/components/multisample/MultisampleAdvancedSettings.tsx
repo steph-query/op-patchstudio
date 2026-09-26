@@ -187,7 +187,7 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <label htmlFor="playmode" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Play Mode
                 </label>
                 <Select
@@ -388,7 +388,7 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                <label htmlFor="portamento-type" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Type
                 </label>
                 <Select
@@ -436,7 +436,7 @@ export function MultisampleAdvancedSettings({ isOpen, onClose }: MultisampleAdva
             </h4>
             
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              <label htmlFor="tuning-root" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                 Root Note
               </label>
               <Select

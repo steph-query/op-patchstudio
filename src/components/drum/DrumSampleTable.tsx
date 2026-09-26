@@ -10,6 +10,7 @@ import { FileDetailsBadges } from '../common/FileDetailsBadges';
 import { DrumSampleSettingsModal } from './DrumSampleSettingsModal';
 import { IconButton } from '../common/IconButton';
 import { getOrganizeModeLabelFull } from './DrumKeyboard';
+import { isReadableAudio } from '../../utils/teDevices';
 
 
 interface DrumSampleTableProps {
@@ -122,9 +123,10 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, i
     e.stopPropagation();
     
     const files = Array.from(e.dataTransfer.files);
-    const audioFile = files.find(file => 
-      file.type.startsWith('audio/') || file.name.toLowerCase().endsWith('.wav')
-    );
+    // The one definition of what this app can open: a .aif usually arrives from the
+    // desktop with no MIME type at all, so a type check alone dropped every OP-1
+    // field sample on the floor without a word.
+    const audioFile = files.find(file => isReadableAudio(file.name) || file.type.startsWith('audio/'));
     
     if (audioFile) {
       handleFileSelect(index, audioFile);
@@ -271,7 +273,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, i
     // Mobile Card Layout
     return (
       <div style={{
-        fontFamily: '"Montserrat", "Arial", sans-serif'
+        fontFamily: '"Inter", "Helvetica Neue", sans-serif'
       }}>
 
 
@@ -289,7 +291,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, i
               <div key={index}>
                 <input
                   type="file"
-                  accept="audio/*,.wav"
+                  accept=".wav,.aif,.aiff,audio/*"
                   style={{ display: 'none' }}
                   ref={(el) => { fileInputRefs.current[index] = el; }}
                   onChange={(e) => {
@@ -489,7 +491,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, i
   // Desktop Table Layout
   return (
     <div style={{
-      fontFamily: '"Montserrat", "Arial", sans-serif',
+      fontFamily: '"Inter", "Helvetica Neue", sans-serif',
       // Remove or reduce padding/margin so table stretches to section edges
       padding: 0,
       margin: 0
@@ -529,7 +531,7 @@ export function DrumSampleTable({ onFileUpload, onClearSample, onRecordSample, i
               <input
                 type="file"
                 multiple
-                accept="audio/*,.wav"
+                accept=".wav,.aif,.aiff,audio/*"
                 style={{ display: 'none' }}
                 ref={(el) => { fileInputRefs.current[index] = el; }}
                 onChange={(e) => {

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppContext, type DrumSample } from '../../context/AppContext';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { EnhancedWaveformEditor } from '../common/EnhancedWaveformEditor';
 import { Slider } from '@carbon/react';
 import React from 'react';
 import { WaveformZoomModal } from '../common/WaveformZoomModal';
+import { useModalFocus } from '../../hooks/useModalFocus';
 
 interface DrumSampleSettingsModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ interface SampleSettings {
 }
 
 export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSampleSettingsModalProps) {
+  const modalFocusRef = useRef<HTMLDivElement | null>(null);
+  useModalFocus(isOpen, modalFocusRef);
   const { state, dispatch } = useAppContext();
   const { play, stopCurrentPlayback } = useAudioPlayer();
   const sample = state.drumSamples[sampleIndex];
@@ -186,7 +189,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
   };
 
   // Add keyboard handler for 'p' key
-  useDrumSampleSettingsKeyboard(isOpen, handlePlaySample, handleStopSample, settings.playmode);
+  useDrumSampleSettingsKeyboard(isOpen, handlePlaySample, handleStopSample, settings.playmode, onClose);
 
   if (!isOpen) return null;
 
@@ -226,6 +229,10 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
     >
       <div 
         className="drum-sample-settings-modal"
+        ref={modalFocusRef}
+      role="dialog"
+        aria-modal="true"
+        aria-labelledby="drum-sample-options-title"
         style={{
           background: c.bg,
           borderRadius: '15px',
@@ -260,7 +267,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             textTransform: 'lowercase',
             letterSpacing: 0,
           }}>
-            sample options
+            <span id="drum-sample-options-title">sample options</span>
           </h3>
         </div>
         {/* Body - Make scrollable */}
@@ -275,7 +282,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
         }}>
           {/* Playmode */}
           <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <label style={{
+            <label htmlFor="sample-playmode" style={{
               minWidth: '80px',
               margin: 0,
               fontSize: '0.9rem',
@@ -286,6 +293,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
               playmode
             </label>
             <select
+              id="sample-playmode"
               style={{
                 flex: 1,
                 minWidth: '180px',
@@ -309,7 +317,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
           </div>
           {/* Direction */}
           <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <label style={{
+            <label htmlFor="sample-direction" style={{
               minWidth: '80px',
               margin: 0,
               fontSize: '0.9rem',
@@ -447,6 +455,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
                 id="sample-transpose"
+                ariaLabelInput="transpose in semitones"
                 min={-48}
                 max={48}
                 step={1}
@@ -472,6 +481,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
                 id="sample-gain"
+                ariaLabelInput="gain in decibels"
                 min={-30}
                 max={20}
                 step={1}
@@ -496,6 +506,7 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: 0, margin: 0 }}>
               <Slider
                 id="sample-pan"
+                ariaLabelInput="pan"
                 min={-100}
                 max={100}
                 step={1}
@@ -650,12 +661,20 @@ export function DrumSampleSettingsModal({ isOpen, onClose, sampleIndex }: DrumSa
 }
 
 // Add keyboard event handler for 'p' key
-export function useDrumSampleSettingsKeyboard(isOpen: boolean, onPlay: () => void, onStop?: () => void, playmode?: string) {
+export function useDrumSampleSettingsKeyboard(isOpen: boolean, onPlay: () => void, onStop?: () => void, playmode?: string, onClose?: () => void) {
   const isPHeld = React.useRef(false);
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape dismisses it, as it does the zoomed waveform and the shortcut list.
+      // Without this the sheet's own promise — "esc closes what is open" — was untrue
+      // of the panel a person spends the most time in.
+      if (e.key === 'Escape' && onClose) {
+        e.preventDefault();
+        onClose();
+        return;
+      }
       if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (playmode === 'gate') {
           if (!isPHeld.current) {
@@ -690,5 +709,5 @@ export function useDrumSampleSettingsKeyboard(isOpen: boolean, onPlay: () => voi
         document.removeEventListener('keyup', handleKeyUp);
       }
     };
-  }, [isOpen, onPlay, onStop, playmode]);
+  }, [isOpen, onPlay, onStop, playmode, onClose]);
 } 

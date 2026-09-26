@@ -254,6 +254,65 @@ describe('useAudioPlayer', () => {
       expect(result.current.getActiveNotesCount()).toBe(1);
     });
 
+    /**
+     * `window.opPatchstudioActiveNotes` is a global list of sounding multisample notes.
+     *
+     * It exists because releasing a note has to work regardless of which closure the
+     * release handler came from — `MultisampleTool`'s `handleKeyRelease` reads this list
+     * rather than component state, which is what makes the missing `onKeyRelease`
+     * dependency on its callback harmless rather than a stuck note.
+     *
+     * The price of a global is that it outlives the component, so its contract is worth
+     * pinning: an entry appears when a note sounds, disappears when the note is released,
+     * and **nothing is left behind when the hook unmounts mid-note**. A leaked entry means
+     * a note id that is released forever and never cleared, which is how stuck notes and
+     * growing lists happen.
+     */
+    describe('the global active-notes list', () => {
+      const globalNotes = () => (window as unknown as { opPatchstudioActiveNotes?: string[] }).opPatchstudioActiveNotes ?? [];
+
+      beforeEach(() => {
+        (window as unknown as { opPatchstudioActiveNotes?: string[] }).opPatchstudioActiveNotes = [];
+      });
+
+      it('lists a sounding multisample note and forgets it on release', async () => {
+        const { result } = renderHook(() => useAudioPlayer());
+
+        await act(async () => {
+          await result.current.playWithADSR(mockBuffer, 'multisample-60-abc', { adsr: defaultADSR, velocity: 127 });
+        });
+        expect(globalNotes()).toContain('multisample-60-abc');
+
+        await act(async () => {
+          result.current.releaseNote('multisample-60-abc');
+          // The release phase is timer-driven, so let it finish.
+          await vi.runAllTimersAsync();
+        });
+        expect(globalNotes(), 'a released note must not stay in the global list').not.toContain('multisample-60-abc');
+      });
+
+      it('tracks only multisample notes, which is what the list is for', async () => {
+        const { result } = renderHook(() => useAudioPlayer());
+        await act(async () => {
+          await result.current.playWithADSR(mockBuffer, 'drum-3', { adsr: defaultADSR, velocity: 127 });
+        });
+        // The drum tool releases by its own path and does not consult this list.
+        expect(globalNotes()).not.toContain('drum-3');
+      });
+
+      it('leaves nothing behind when the hook unmounts mid-note', async () => {
+        const { result, unmount } = renderHook(() => useAudioPlayer());
+        await act(async () => {
+          await result.current.playWithADSR(mockBuffer, 'multisample-72-xyz', { adsr: defaultADSR, velocity: 127 });
+        });
+        expect(globalNotes()).toContain('multisample-72-xyz');
+
+        // Switching tabs unmounts the tool while a note is still sounding.
+        unmount();
+        expect(globalNotes(), 'unmounting mid-note leaked an entry into a list that outlives the component').toEqual([]);
+      });
+    });
+
     it('should handle polyphonic playback', async () => {
       const { result } = renderHook(() => useAudioPlayer());
       

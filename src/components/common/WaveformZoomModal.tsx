@@ -4,6 +4,7 @@ import { isMobile, isTablet } from 'react-device-detect';
 import { triggerRotateOverlay } from '../../App';
 import { useAudioPlayer } from '../../hooks/useAudioPlayer';
 import { type DrumSample, type MultisampleFile } from '../../context/AppContext';
+import { useModalFocus } from '../../hooks/useModalFocus';
 
 interface WaveformZoomModalProps {
   isOpen: boolean;
@@ -589,6 +590,13 @@ export function WaveformZoomModal({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape dismisses it, as every other layer in the app does.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        stopPlayback();
+        onClose();
+        return;
+      }
       if (e.key === 'p' || e.key === 'P') {
         e.preventDefault();
         if (!isPlaying) {
@@ -614,7 +622,7 @@ export function WaveformZoomModal({
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isOpen, playSelection, isPlaying, stopPlayback]);
+  }, [isOpen, playSelection, isPlaying, stopPlayback, onClose]);
 
   // Add touch event handlers for mobile marker dragging
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -680,36 +688,48 @@ export function WaveformZoomModal({
     }
   }, [isOpen]);
 
-  // Focus trap: keep focus inside modal
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleTab = (e: KeyboardEvent) => {
-      if (!modalRef.current) return;
-      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.key === 'Tab') {
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    };
-    document.addEventListener('keydown', handleTab);
-    return () => document.removeEventListener('keydown', handleTab);
-  }, [isOpen]);
+  // Focus in, Tab trapped, and focus returned on close — all via `useModalFocus`,
+  // which this component's own trap was the template for.
+  useModalFocus(isOpen, modalRef);
 
   if (!isOpen) return null;
+
+  // Two of the three callers pass `sample?.audioBuffer || null`, so this can open
+  // with nothing to draw — a restored session whose audio failed to decode still
+  // has the row and the zoom button. The full editor in that state showed an empty
+  // waveform whose transport did nothing, so say what happened instead.
+  if (!audioBuffer) {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Audio not loaded"
+        ref={modalRef}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 1300, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        <div style={{
+          background: 'var(--color-bg-primary, #fff)', color: 'var(--color-text-primary, #222)',
+          padding: '1.5rem', borderRadius: '8px', maxWidth: '22rem', textAlign: 'center',
+        }}>
+          <p style={{ margin: '0 0 1rem' }}>
+            this sample's audio is not loaded, so there is no waveform to edit. reload the
+            file to work on it.
+          </p>
+          <button
+            ref={firstButtonRef}
+            onClick={onClose}
+            style={{ padding: '0.5rem 1.25rem', cursor: 'pointer' }}
+          >
+            close
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
       <div
@@ -728,7 +748,7 @@ export function WaveformZoomModal({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 9999,
-          fontFamily: '"Montserrat", "Arial", sans-serif'
+          fontFamily: '"Inter", "Helvetica Neue", sans-serif'
         }}
         onClick={onClose}
       >

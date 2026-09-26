@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useModalFocus } from '../../hooks/useModalFocus';
 
 interface SessionRestorationModalProps {
   isOpen: boolean;
@@ -18,14 +19,14 @@ export function SessionRestorationModal({
   sessionInfo 
 }: SessionRestorationModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  // The dialog already had a container ref; the hook uses that one rather than a second.
   const firstButtonRef = useRef<HTMLButtonElement>(null);
   const lastButtonRef = useRef<HTMLButtonElement>(null);
+  useModalFocus(isOpen, modalRef);
 
   // Focus management
   useEffect(() => {
     if (isOpen) {
-      // Focus the first button when modal opens
-      firstButtonRef.current?.focus();
       
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
@@ -47,20 +48,7 @@ export function SessionRestorationModal({
             console.error('Failed to start new session:', error);
           });
           break;
-        case 'Tab':
-          // Trap focus within the modal
-          if (event.shiftKey) {
-            if (document.activeElement === firstButtonRef.current) {
-              event.preventDefault();
-              lastButtonRef.current?.focus();
-            }
-          } else {
-            if (document.activeElement === lastButtonRef.current) {
-              event.preventDefault();
-              firstButtonRef.current?.focus();
-            }
-          }
-          break;
+        // Tab is trapped by `useModalFocus`, which also returns focus on close.
       }
     };
 
@@ -79,7 +67,11 @@ export function SessionRestorationModal({
     const drumCount = sessionInfo.drumSamplesCount;
     const multisampleCount = sessionInfo.multisampleFilesCount;
     
-    return `from ${date} with ${drumCount} drum samples and ${multisampleCount} multisample files`;
+    // Counts and nouns agree: this is the first sentence someone reads on a relaunch,
+    // and "1 drum samples" reads as a fault in the app rather than a fact about their work.
+    const drums = `${drumCount} drum ${drumCount === 1 ? 'sample' : 'samples'}`;
+    const zones = `${multisampleCount} multisample ${multisampleCount === 1 ? 'file' : 'files'}`;
+    return `from ${date} with ${drums} and ${zones}`;
   };
 
   return (
@@ -153,7 +145,7 @@ export function SessionRestorationModal({
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 9999,
-          fontFamily: '"Montserrat", "Arial", sans-serif',
+          fontFamily: '"Inter", "Helvetica Neue", sans-serif',
           padding: 0,
         }}
       >

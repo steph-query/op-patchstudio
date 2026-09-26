@@ -126,6 +126,7 @@ export function AudioProcessingSection({
           <div style={{ padding: '4px' }}>
             <Toggle
               id="normalize-toggle"
+                      aria-label="normalize samples"
               labelA="off"
               labelB="on"
               toggled={normalize}
@@ -178,6 +179,7 @@ export function AudioProcessingSection({
               <div style={{ padding: '4px' }}>
                 <Toggle
                   id="cut-loop-toggle"
+                      aria-label="cut samples at the loop end"
                   labelA="off"
                   labelB="on"
                   toggled={cutAtLoopEnd}

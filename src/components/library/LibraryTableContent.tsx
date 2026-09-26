@@ -182,6 +182,7 @@ export function LibraryTableContent({
             }} scope="col">
               <input
                 type="checkbox"
+                aria-label="select all presets"
                 checked={presets.length > 0 && presets.every(preset => selectedPresets.has(preset.id))}
                 onChange={e => e.target.checked ? onSelectAll() : onClearSelection()}
                 style={{
@@ -293,6 +294,7 @@ export function LibraryTableContent({
               }}>
                 <input
                   type="checkbox"
+                  aria-label={`select ${preset.name}`}
                   checked={selectedPresets.has(preset.id)}
                   onChange={() => onToggleSelection(preset.id)}
                   style={{

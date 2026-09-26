@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useModalFocus } from '../../hooks/useModalFocus';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export function ConfirmationModal({
   onConfirm, 
   onCancel 
 }: ConfirmationModalProps) {
+  const modalFocusRef = useRef<HTMLDivElement | null>(null);
+  useModalFocus(isOpen, modalFocusRef);
   const [isLoading, setIsLoading] = React.useState(false);
 
   const handleConfirm = async () => {
@@ -25,6 +28,17 @@ export function ConfirmationModal({
       setIsLoading(false);
     }
   };
+
+  // Escape cancels. On a confirmation the safe answer is the one a person reaches
+  // for without thinking, and every other layer in the app already closes this way.
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); onCancel(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
 
@@ -41,11 +55,15 @@ export function ConfirmationModal({
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 9999,
-        fontFamily: '"Montserrat", "Arial", sans-serif'
+        fontFamily: '"Inter", "Helvetica Neue", sans-serif'
       }}
       onClick={onCancel}
     >
       <div 
+        ref={modalFocusRef}
+      role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmation-title"
         style={{
           backgroundColor: 'var(--color-bg-primary)',
           borderRadius: '6px',
@@ -62,7 +80,7 @@ export function ConfirmationModal({
           padding: '1.5rem 1.5rem 1rem 1.5rem',
           borderBottom: '1px solid var(--color-border-subtle)'
         }}>
-          <h3 style={{
+          <h3 id="confirmation-title" style={{
             margin: '0',
             fontSize: '1.25rem',
             fontWeight: '300',

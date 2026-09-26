@@ -51,6 +51,18 @@ const actionButtonStyle: React.CSSProperties = {
   flexShrink: 0
 };
 
+/**
+ * How deep a dropped folder is followed, and how many files are collected.
+ *
+ * The walk was unbounded in both directions. A symlink cycle — which `webkitGetAsEntry` can
+ * expose — recursed until the app died, and dropping a whole sample library read every file
+ * in it into memory as a `File` before any filtering, for a tool that accepts **twenty-four
+ * zones**. The caps are generous enough that a real folder of samples is unaffected and
+ * finite enough that a mistake is survivable.
+ */
+export const MAX_FOLDER_DEPTH = 8;
+export const MAX_FILES_SCANNED = 500;
+
 export function MultisampleSampleTable({ 
   onFileUpload, 
   onClearSample,
@@ -135,7 +147,21 @@ export function MultisampleSampleTable({
       });
       
       await Promise.all(processingPromises);
-      
+
+      // Say so if the walk stopped early. Silently loading the first 500 files of a dropped
+      // library, with no hint that it was truncated, would look like the app losing samples.
+      if (files.length >= MAX_FILES_SCANNED) {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            id: Date.now().toString(),
+            type: 'error',
+            title: 'that folder is very large',
+            message: `Stopped after looking at ${MAX_FILES_SCANNED} files, and folders deeper than ${MAX_FOLDER_DEPTH} levels were not followed. Drop the samples you want, or a smaller folder — the sample lab holds 24 zones.`,
+          },
+        });
+      }
+
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       // Fallback for browsers that don't support .items
       files.push(...Array.from(e.dataTransfer.files));
@@ -165,7 +191,7 @@ export function MultisampleSampleTable({
             id: Date.now().toString(),
             type: 'info',
             title: 'file limit reached',
-            message: `loaded ${filesToProcess.length} files (${audioFiles.length - remainingSlots} additional files skipped)`
+            message: `loaded ${filesToProcess.length} ${filesToProcess.length === 1 ? 'file' : 'files'} (${audioFiles.length - remainingSlots} additional files skipped)`
           }
         });
       }
@@ -178,7 +204,9 @@ export function MultisampleSampleTable({
     }
   };
 
-  const processEntry = async (entry: any, files: File[]): Promise<void> => {
+  const processEntry = async (entry: any, files: File[], depth = 0): Promise<void> => {
+    // Stop rather than hang. Both limits are reported to the user by the caller.
+    if (depth > MAX_FOLDER_DEPTH || files.length >= MAX_FILES_SCANNED) return;
     try {
       if (entry.isFile) {
         const file = await new Promise<File>((resolve, reject) => {
@@ -224,7 +252,13 @@ export function MultisampleSampleTable({
         }
         
         // Process all entries in parallel for better performance
-        await Promise.all(allEntries.map(childEntry => processEntry(childEntry, files)));
+        // Sequential rather than `Promise.all` over every child at once: a folder with
+        // thousands of entries fired thousands of concurrent `entry.file()` calls, and the
+        // limits above cannot stop work that has already been started in parallel.
+        for (const childEntry of allEntries) {
+          if (files.length >= MAX_FILES_SCANNED) break;
+          await processEntry(childEntry, files, depth + 1);
+        }
       }
     } catch (error) {
       console.error('Error processing entry:', entry?.name, error);
@@ -258,7 +292,7 @@ export function MultisampleSampleTable({
               id: Date.now().toString(),
               type: 'info',
               title: 'file limit reached',
-              message: `loaded ${filesToProcess.length} files (${audioFiles.length - remainingSlots} additional files skipped)`
+              message: `loaded ${filesToProcess.length} ${filesToProcess.length === 1 ? 'file' : 'files'} (${audioFiles.length - remainingSlots} additional files skipped)`
             }
           });
         }
@@ -335,10 +369,14 @@ export function MultisampleSampleTable({
     }
   };
 
-  const handleNoteKeyDown = (index: number, e: React.KeyboardEvent) => {
+  const handleNoteKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      // Handle Enter key like blur
-      handleNoteBlur(index);
+      // Blur only, and let the blur handler commit. Committing here as well ran the
+      // same commit twice in one tick: React had not re-rendered, so the second call
+      // still saw the typed value in `editingNotes` and dispatched again — by which
+      // point changing a root note had re-sorted the list, so that second dispatch
+      // landed on whichever sample now sat at this index. Pressing Enter after
+      // setting one zone's key silently gave a different zone the same key.
       (e.target as HTMLInputElement).blur();
     }
   };
@@ -362,6 +400,11 @@ export function MultisampleSampleTable({
     e.preventDefault();
     
     if (draggedItem !== null && draggedItem !== targetIndex) {
+      // Editing state is keyed by row index, and this is about to change what each
+      // index means. Blur normally commits before a drag can start, but relying on
+      // that is how one zone's key ended up on another; drop anything uncommitted
+      // rather than let it land on a different sample.
+      setEditingNotes({});
       dispatch({
         type: 'REORDER_MULTISAMPLE_FILES',
         payload: {
@@ -497,12 +540,12 @@ export function MultisampleSampleTable({
     // Mobile Card Layout - similar to drum tool
     return (
       <div style={{
-        fontFamily: '"Montserrat", "Arial", sans-serif'
+        fontFamily: '"Inter", "Helvetica Neue", sans-serif'
       }}>
         <input
           ref={browseFileInputRef}
           type="file"
-          accept="audio/*,.wav"
+          accept=".wav,.aif,.aiff,audio/*"
           multiple
           onChange={handleBrowseFileChange}
           style={{ display: 'none' }}
@@ -552,7 +595,7 @@ export function MultisampleSampleTable({
               <div key={index}>
                 <input
                   type="file"
-                  accept="audio/*,.wav"
+                  accept=".wav,.aif,.aiff,audio/*"
                   style={{ display: 'none' }}
                   ref={(el) => { fileInputRefs.current[index] = el; }}
                   onChange={(e) => handleFileInputChange(index, e)}
@@ -582,7 +625,7 @@ export function MultisampleSampleTable({
                           value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60, state.midiNoteMapping)}
                           onChange={(e) => handleNoteChange(index, e.target.value)}
                           onBlur={() => handleNoteBlur(index)}
-                          onKeyDown={(e) => handleNoteKeyDown(index, e)}
+                          onKeyDown={(e) => handleNoteKeyDown(e)}
                           onFocus={(e) => (e.target as HTMLInputElement).select()}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -773,7 +816,7 @@ export function MultisampleSampleTable({
   // Desktop Layout
   return (
     <div style={{
-      fontFamily: '"Montserrat", "Arial", sans-serif',
+      fontFamily: '"Inter", "Helvetica Neue", sans-serif',
       // Remove or reduce padding/margin so table stretches to section edges
       padding: 0,
       margin: 0
@@ -781,7 +824,7 @@ export function MultisampleSampleTable({
       <input
         ref={browseFileInputRef}
         type="file"
-        accept="audio/*,.wav"
+        accept=".wav,.aif,.aiff,audio/*"
         multiple
         onChange={handleBrowseFileChange}
         style={{ display: 'none' }}
@@ -902,7 +945,7 @@ export function MultisampleSampleTable({
               <div key={index}>
                 <input
                   type="file"
-                  accept="audio/*,.wav"
+                  accept=".wav,.aif,.aiff,audio/*"
                   style={{ display: 'none' }}
                   ref={(el) => { fileInputRefs.current[index] = el; }}
                   onChange={(e) => handleFileInputChange(index, e)}
@@ -953,7 +996,7 @@ export function MultisampleSampleTable({
                           value={editingNotes[index] ?? midiNoteToString(sample.rootNote || 60, state.midiNoteMapping)}
                           onChange={(e) => handleNoteChange(index, e.target.value)}
                           onBlur={() => handleNoteBlur(index)}
-                          onKeyDown={(e) => handleNoteKeyDown(index, e)}
+                          onKeyDown={(e) => handleNoteKeyDown(e)}
                           onFocus={(e) => (e.target as HTMLInputElement).select()}
                           onClick={(e) => {
                             e.stopPropagation();
