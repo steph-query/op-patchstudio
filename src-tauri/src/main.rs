@@ -65,10 +65,15 @@ async fn tp7_switch_to_mtp() -> Result<te::Tp7SwitchReport, String> {
 }
 
 #[tauri::command]
-async fn mtp_connect(state: State<'_, DeviceState>, location_id: Option<u64>) -> Result<DeviceInfo, String> {
+async fn mtp_connect(state: State<'_, DeviceState>, location_id: Option<String>) -> Result<DeviceInfo, String> {
     let mut guard = state.device.lock().await;
     if guard.is_some() { return Err("Disconnect the current device first".into()); }
-    let location = location_id.filter(|id| *id != 0).ok_or("Select a device before connecting")?;
+    // Parsed from a string rather than taken as a u64; see `te::AvailableDevice::location_id`.
+    let location = location_id
+        .as_deref()
+        .and_then(|id| id.parse::<u64>().ok())
+        .filter(|id| *id != 0)
+        .ok_or("Select a device before connecting")?;
     let opened = MtpDevice::open_by_location(location).await;
     let device = opened.map_err(|e| {
         format!("Failed to connect: {}. Put the device in MTP mode, close Field Kit and other transfer apps, then reconnect USB.", e)

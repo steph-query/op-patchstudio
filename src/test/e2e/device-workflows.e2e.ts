@@ -20,8 +20,8 @@ for (const kind of ['op-1-field', 'tp-7', 'op-xy']) {
       Object.assign(window, { __TEST_CALLS__: calls, __TAURI__: { core: { invoke: async (command: string, args: Record<string, unknown> = {}) => {
         calls.push(command);
         switch (command) {
-          case 'mtp_list_available': return [{ kind, model, product: model, serial: 'fixture', vendor_id: 0x2367, product_id: 1, location_id: 7, mode: 'mtp' }];
-          case 'mtp_connect': if (args.locationId !== 7) throw new Error('Wrong device'); return { kind, model, manufacturer: 'teenage engineering', serial: 'fixture', connected: true };
+          case 'mtp_list_available': return [{ kind, model, product: model, serial: 'fixture', vendor_id: 0x2367, product_id: 1, location_id: '7', mode: 'mtp' }];
+          case 'mtp_connect': if (args.locationId !== '7') throw new Error('Wrong device'); return { kind, model, manufacturer: 'teenage engineering', serial: 'fixture', connected: true };
           case 'mtp_disconnect': return;
           case 'mtp_list_storages': return [{ capacity: 8000000000, free_space: 6000000000, description: 'fixture' }];
           case 'mtp_scan_tree': return { entries: kind === 'op-xy' ? [{ ...entry('presets/drum/Fixture.preset', 30), is_directory: true }, { ...entry('presets/drum/Fixture.preset/patch.json', 31), size: patch.length }, entry('presets/drum/Fixture.preset/sample.wav', 32)] : entries, missing_roots: [], roots: [] };

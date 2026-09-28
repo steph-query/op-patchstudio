@@ -5,7 +5,7 @@ import { mtpConnect, mtpDisconnect, mtpScanPresets, mtpListStorages, mtpListAvai
 vi.mock('../../utils/tauriBridge', () => ({ isTauriAvailable: () => true, mtpConnect: vi.fn(), mtpDisconnect: vi.fn(), mtpScanPresets: vi.fn(), mtpListStorages: vi.fn(), mtpListAvailable: vi.fn(), mtpScanTree: vi.fn(), tp7SwitchToMtp: vi.fn() }));
 const dispatch = vi.fn();
 vi.mock('../../context/AppContext', () => ({ useAppContext: () => ({ state: { currentTab: 'drum', tauriDevice: null, tauriConnecting: false, tauriStorageInfo: null }, dispatch }) }));
-const device = { location_id: 123, vendor_id: 0x2367, product_id: 1, manufacturer: 'teenage engineering', product: 'OP-XY', serial: 'test', kind: 'op-xy' as const, mode: 'mtp' as const };
+const device = { location_id: '123', vendor_id: 0x2367, product_id: 1, manufacturer: 'teenage engineering', product: 'OP-XY', serial: 'test', kind: 'op-xy' as const, mode: 'mtp' as const };
 async function discover() {
   fireEvent.click(screen.getByRole('button', { name: 'find devices' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'connect device' })).toBeEnabled());
@@ -24,8 +24,33 @@ describe('DeviceConnectionBar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'connect device' }));
     await waitFor(() => expect(mtpDisconnect).toHaveBeenCalled());
     expect(dispatch.mock.calls.some(([action]) => action.type === 'SET_TAURI_DEVICE')).toBe(false);
-    expect(mtpConnect).toHaveBeenCalledWith(123);
+    expect(mtpConnect).toHaveBeenCalledWith('123');
   });
+  /**
+   * A real USB location id, handed back to `mtp_connect` unrounded.
+   *
+   * `location_id` is a Rust `u64` built from USB topology. This is the value a TP-7
+   * actually reported: 12657954965147713707, roughly 1405x past `Number.MAX_SAFE_INTEGER`.
+   * While it crossed the IPC boundary as a JSON number it was silently rounded to
+   * ...713536, and mtp-rs matches the device with `d.location_id == location_id`, so the
+   * lookup failed and every connection to real hardware died with "No MTP device found" —
+   * while the device sat there openable. It is a string end to end now.
+   *
+   * The fixtures here used to say 7, which survives float64 exactly. That is the whole
+   * reason a full green suite shipped a build that could not connect to anything.
+   */
+  it('connects to a device whose location id exceeds the safe integer range', async () => {
+    const realistic = '12657954965147713707';
+    expect(Number(realistic)).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
+    expect(String(Number(realistic))).not.toBe(realistic);
+    vi.mocked(mtpListAvailable).mockResolvedValue([{ ...device, location_id: realistic, product: 'TP-7 MTP Device', kind: 'tp-7' as const }]);
+    vi.mocked(mtpConnect).mockResolvedValue({ manufacturer: 'teenage engineering', model: 'TP-7 MTP Device', serial: 'test', connected: true });
+    vi.mocked(mtpScanTree).mockResolvedValue({ entries: [], missing_roots: [], roots: [] });
+    render(<DeviceConnectionBar />); await discover();
+    fireEvent.click(screen.getByRole('button', { name: 'connect device' }));
+    await waitFor(() => expect(mtpConnect).toHaveBeenCalledWith(realistic));
+  });
+
   it('ignores repeated connection requests while scanning', async () => {
     let finish!: (value: Awaited<ReturnType<typeof mtpScanPresets>>) => void;
     vi.mocked(mtpScanPresets).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
@@ -38,7 +63,7 @@ describe('DeviceConnectionBar', () => {
     expect(dispatch.mock.calls.some(([action]) => action.type === 'SET_TAURI_DEVICE')).toBe(true);
   });
   it('requires an explicit choice when multiple devices are present', async () => {
-    vi.mocked(mtpListAvailable).mockResolvedValue([device, { ...device, location_id: 456, serial: 'second' }]);
+    vi.mocked(mtpListAvailable).mockResolvedValue([device, { ...device, location_id: '456', serial: 'second' }]);
     render(<DeviceConnectionBar />);
     fireEvent.click(screen.getByRole('button', { name: 'find devices' }));
     await screen.findByText('OP-XY · second');
@@ -47,7 +72,7 @@ describe('DeviceConnectionBar', () => {
     vi.mocked(mtpConnect).mockResolvedValue({ manufacturer: 'TE', model: 'OP-XY', serial: 'second', connected: true });
     vi.mocked(mtpScanPresets).mockResolvedValue({ presets: [], projects: [], standalone_samples: [] });
     fireEvent.click(screen.getByRole('button', { name: 'connect device' }));
-    await waitFor(() => expect(mtpConnect).toHaveBeenCalledWith(456));
+    await waitFor(() => expect(mtpConnect).toHaveBeenCalledWith('456'));
   });
   it('scans OP-1 roots without invoking the OP-XY parser', async () => {
     vi.mocked(mtpListAvailable).mockResolvedValue([{ ...device, product: 'OP-1 field', kind: 'op-1-field' }]);
@@ -71,9 +96,9 @@ describe('DeviceConnectionBar transfer instructions', () => {
 });
 
 describe('DeviceConnectionBar — what it says after looking', () => {
-  const tp7Waiting = { location_id: 0, vendor_id: 0x2367, product_id: 0x19, manufacturer: 'teenage engineering', product: 'TP-7', serial: 'F1RTL11C', kind: 'tp-7' as const, mode: 'usb' as const };
-  const opxy = { location_id: 123, vendor_id: 0x2367, product_id: 1, manufacturer: 'teenage engineering', product: 'OP-XY', serial: 'xy', kind: 'op-xy' as const, mode: 'mtp' as const };
-  const field = { location_id: 456, vendor_id: 0x2367, product_id: 2, manufacturer: 'teenage engineering', product: 'OP-1 field', serial: 'f1', kind: 'op-1-field' as const, mode: 'mtp' as const };
+  const tp7Waiting = { location_id: null, vendor_id: 0x2367, product_id: 0x19, manufacturer: 'teenage engineering', product: 'TP-7', serial: 'F1RTL11C', kind: 'tp-7' as const, mode: 'usb' as const };
+  const opxy = { location_id: '123', vendor_id: 0x2367, product_id: 1, manufacturer: 'teenage engineering', product: 'OP-XY', serial: 'xy', kind: 'op-xy' as const, mode: 'mtp' as const };
+  const field = { location_id: '456', vendor_id: 0x2367, product_id: 2, manufacturer: 'teenage engineering', product: 'OP-1 field', serial: 'f1', kind: 'op-1-field' as const, mode: 'mtp' as const };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,7 +135,7 @@ describe('DeviceConnectionBar — what it says after looking', () => {
   });
 
   it('says what to do when something is attached but not in transfer mode', async () => {
-    vi.mocked(mtpListAvailable).mockResolvedValue([{ ...field, mode: 'usb' as const, location_id: 0 }]);
+    vi.mocked(mtpListAvailable).mockResolvedValue([{ ...field, mode: 'usb' as const, location_id: null }]);
     await look();
     expect(await screen.findByText(/not in file-transfer mode yet/)).toBeInTheDocument();
   });

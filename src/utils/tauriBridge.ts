@@ -22,7 +22,10 @@ export interface TauriDeviceInfo {
 /** A device seen on USB, whether or not it is currently in MTP mode. */
 export interface TauriAvailableDevice {
   /** Non-zero only when the device is reachable over MTP right now. */
-  location_id: number;
+  /** Decimal string, or null when the device cannot be opened over MTP right now.
+   *  A string because it is a Rust u64 and exceeds JavaScript's safe integer range —
+   *  see `AvailableDevice::location_id` in `src-tauri/src/te.rs`. */
+  location_id: string | null;
   vendor_id: number;
   product_id: number;
   manufacturer: string | null;
@@ -125,7 +128,7 @@ export async function mtpListAvailable(): Promise<TauriAvailableDevice[]> {
 }
 
 /** Open a session with an explicitly selected USB location; native code refuses an omitted location. */
-export async function mtpConnect(locationId?: number): Promise<TauriDeviceInfo> {
+export async function mtpConnect(locationId?: string | null): Promise<TauriDeviceInfo> {
   return invoke<TauriDeviceInfo>('mtp_connect', { locationId: locationId ?? null });
 }
 

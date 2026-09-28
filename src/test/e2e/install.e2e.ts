@@ -9,7 +9,7 @@ test('the install plan is readable and does not say the same thing twice', async
   await page.addInitScript(() => {
     Object.assign(window, { __TAURI__: { core: { invoke: async (command: string) => {
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'op-1-field', model: 'OP-1 field', product: 'OP-1 field', serial: 'F1ELD001', vendor_id: 0x2367, product_id: 1, location_id: 7, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'op-1-field', model: 'OP-1 field', product: 'OP-1 field', serial: 'F1ELD001', vendor_id: 0x2367, product_id: 1, location_id: '7', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'op-1-field', model: 'OP-1 field', manufacturer: 'teenage engineering', serial: 'F1ELD001', connected: true };
         case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 6e9, description: 'fixture' }];
         case 'mtp_scan_tree': return { entries: [], missing_roots: [], roots: [] };
@@ -67,7 +67,7 @@ test('typing a subfolder name does not re-read the device', async ({ page }) => 
     window.__SCANS__ = [];
     window.__TAURI__ = { core: { invoke: async (command, args) => {
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: 7, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: '7', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'op-xy', model: 'OP-XY', manufacturer: 'teenage engineering', serial: 'XY-0042', connected: true };
         case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 4e9, description: 'fixture' }];
         case 'mtp_scan_presets': return { presets: [], projects: [], standalone_samples: [] };

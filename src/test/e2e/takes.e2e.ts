@@ -24,7 +24,7 @@ test('a field offers its tape and album audio as takes, and nothing else', async
       __TAURI__: { core: { invoke: async (command: string, args: Record<string, unknown> = {}) => {
         switch (command) {
           case 'mtp_list_available':
-            return [{ kind: 'op-1-field', model: 'OP-1 field', product: 'OP-1 field', serial: 'fixture', vendor_id: 0x2367, product_id: 1, location_id: 7, mode: 'mtp' }];
+            return [{ kind: 'op-1-field', model: 'OP-1 field', product: 'OP-1 field', serial: 'fixture', vendor_id: 0x2367, product_id: 1, location_id: '7', mode: 'mtp' }];
           case 'mtp_connect':
             return { kind: 'op-1-field', model: 'OP-1 field', manufacturer: 'teenage engineering', serial: 'fixture', connected: true };
           case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 6e9, description: 'fixture' }];

@@ -55,12 +55,12 @@ export function DeviceConnectionBar() {
   async function discover() {
     const devices = (await mtpListAvailable()).filter(device => device.vendor_id === TE_USB_VENDOR_ID && device.kind !== 'unknown');
     setAvailable(devices);
-    const ready = devices.filter(device => device.mode === 'mtp' && device.location_id !== 0);
-    setLocation(ready.length === 1 ? String(ready[0].location_id) : '');
+    const ready = devices.filter(device => device.mode === 'mtp' && device.location_id);
+    setLocation(ready.length === 1 ? ready[0].location_id ?? '' : '');
     // Four states, not two. The old message told people to select a device even when
     // one had just been selected for them, and said nothing useful to the owner of a
     // TP-7 that is on the bus but still in audio mode — the first thing they meet.
-    const waiting = devices.filter(device => device.mode !== 'mtp' || device.location_id === 0);
+    const waiting = devices.filter(device => device.mode !== 'mtp' || !device.location_id);
     if (!devices.length) {
       setMessage('No supported devices found. Check USB and the device’s transfer mode.');
     } else if (ready.length === 1) {
@@ -75,7 +75,7 @@ export function DeviceConnectionBar() {
   }
 
   async function connect() {
-    const selected = available.find(device => String(device.location_id) === location && device.mode === 'mtp');
+    const selected = available.find(device => device.location_id === location && device.mode === 'mtp');
     if (!selected) throw new Error('Find and select a device first.');
     let opened = false;
     try {
@@ -112,7 +112,7 @@ export function DeviceConnectionBar() {
         <button disabled={state.tauriConnecting} onClick={() => void run(discover, 'Looking for connected instruments.')}>find devices</button>
         <select aria-label="Select device" value={location} onChange={event => setLocation(event.target.value)} disabled={state.tauriConnecting}>
           <option value="">select device…</option>
-          {available.map((device, index) => <option key={String(device.location_id) + '-' + index} disabled={device.mode !== 'mtp' || !device.location_id} value={device.location_id || 'usb-' + index}>{device.product ?? getDeviceProfile(device.kind).label} · {device.serial ?? 'USB ' + device.location_id} {device.mode !== 'mtp' ? '(enable transfer mode)' : ''}</option>)}
+          {available.map((device, index) => <option key={(device.location_id ?? 'usb') + '-' + index} disabled={device.mode !== 'mtp' || !device.location_id} value={device.location_id || 'usb-' + index}>{device.product ?? getDeviceProfile(device.kind).label} · {device.serial ?? 'USB ' + device.location_id} {device.mode !== 'mtp' ? '(enable transfer mode)' : ''}</option>)}
         </select>
         <button disabled={!location || state.tauriConnecting} onClick={() => void run(connect, 'Opening a transfer session and reading the library. This can take a moment on a full device.')}>connect device</button>
         <button disabled={state.tauriConnecting} onClick={() => void run(async () => { await tp7SwitchToMtp(); setMessage('TP-7 is switching to transfer mode. Wait a moment, then find devices again.'); setAvailable([]); setLocation(''); }, 'Asking the TP-7 to switch into transfer mode.')}>prepare tp-7</button>

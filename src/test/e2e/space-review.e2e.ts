@@ -10,7 +10,7 @@ test('a duplicated file shows both of its real locations, readably', async ({ pa
   await page.addInitScript(() => {
     Object.assign(window, { __TAURI__: { core: { invoke: async (command: string) => {
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 0x2367, product_id: 1, location_id: 7, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 0x2367, product_id: 1, location_id: '7', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'op-xy', model: 'OP-XY', manufacturer: 'teenage engineering', serial: 'XY-0042', connected: true };
         case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 3.4e9, description: 'fixture' }];
         case 'mtp_scan_presets': return {

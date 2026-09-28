@@ -45,8 +45,22 @@ pub fn backup_roots(kind: &str) -> &'static [&'static str] {
 
 #[derive(Serialize, Clone, Debug)]
 pub struct AvailableDevice {
-    /// Non-zero only when the device can be opened over MTP right now.
-    pub location_id: u64,
+    /// Where the device sits on the USB bus as a decimal string, or `None` when the
+    /// device is visible on the bus but cannot be opened over MTP right now.
+    ///
+    /// **A string because this is a `u64` and JSON numbers are float64.** Real values
+    /// come from USB topology and are enormous: a TP-7 reports 12657954965147713707,
+    /// about 1405x past JavaScript's 2^53 exact-integer limit. Sent as a JSON number it
+    /// reached the webview already rounded (...713536), and handing that back to
+    /// `mtp_connect` matched no device — so every connection to real hardware failed
+    /// with "No MTP device found" while the device sat there perfectly openable.
+    ///
+    /// `None` rather than `0` for the not-openable case: the frontend guards this with
+    /// a falsy check, and the string `"0"` is truthy.
+    ///
+    /// Tests used small ids like 7, which survive float64 exactly, which is why the
+    /// whole suite passed against a bug that broke every real device.
+    pub location_id: Option<String>,
     pub vendor_id: u16,
     pub product_id: u16,
     pub manufacturer: Option<String>,
@@ -63,7 +77,7 @@ pub fn list_available() -> Result<Vec<AvailableDevice>, String> {
     let mut result: Vec<AvailableDevice> = mtp
         .iter()
         .map(|d| AvailableDevice {
-            location_id: d.location_id,
+            location_id: Some(d.location_id.to_string()),
             vendor_id: d.vendor_id,
             product_id: d.product_id,
             manufacturer: d.manufacturer.clone(),
@@ -89,7 +103,7 @@ pub fn list_available() -> Result<Vec<AvailableDevice>, String> {
                 continue;
             }
             result.push(AvailableDevice {
-                location_id: 0,
+                location_id: None,
                 vendor_id: dev.vendor_id(),
                 product_id: dev.product_id(),
                 manufacturer: dev.manufacturer_string().map(String::from),

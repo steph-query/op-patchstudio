@@ -25,8 +25,8 @@ function monoWav(frames = 4410) {
 const HARNESS = `(() => {
   window.__PLUGGED__ = 'tp-7';
   const devices = {
-    'tp-7': { kind: 'tp-7', model: 'TP-7 MTP Device', product: 'TP-7', serial: 'TP-0007', vendor_id: 9063, product_id: 2, location_id: 3, mode: 'mtp' },
-    'op-xy': { kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: 7, mode: 'mtp' },
+    'tp-7': { kind: 'tp-7', model: 'TP-7 MTP Device', product: 'TP-7', serial: 'TP-0007', vendor_id: 9063, product_id: 2, location_id: '3', mode: 'mtp' },
+    'op-xy': { kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: '7', mode: 'mtp' },
   };
   window.__TAURI__ = { core: { invoke: async (command) => {
     const current = devices[window.__PLUGGED__];

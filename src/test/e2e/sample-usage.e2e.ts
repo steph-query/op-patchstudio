@@ -52,7 +52,7 @@ test('one action says which projects share a sample, and refuses to guess when o
     window.__READS__ = [];
     window.__TAURI__ = { core: { invoke: async (command, args) => {
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: 7, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: '7', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'op-xy', model: 'OP-XY', manufacturer: 'teenage engineering', serial: 'XY-0042', connected: true };
         case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 4e9, description: 'fixture' }];
         case 'mtp_scan_presets': return {
@@ -129,7 +129,7 @@ test('the sweep survives leaving the tab, and can be stopped while it runs', asy
     window.__HOLD__ = false;
     window.__TAURI__ = { core: { invoke: async (command, args) => {
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: 7, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 9063, product_id: 1, location_id: '7', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'op-xy', model: 'OP-XY', manufacturer: 'teenage engineering', serial: 'XY-0042', connected: true };
         case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 4e9, description: 'fixture' }];
         case 'mtp_scan_presets': return {

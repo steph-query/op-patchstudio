@@ -23,7 +23,7 @@ test('a five-channel TP-7 take reaches the stem export from a cold start', async
     window.__TAURI__ = { core: { invoke: async (command, args) => {
       window.__CALLS__.push(command);
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'tp-7', model: 'TP-7 MTP Device', product: 'TP-7', serial: 'TP-0007', vendor_id: 9063, product_id: 2, location_id: 3, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'tp-7', model: 'TP-7 MTP Device', product: 'TP-7', serial: 'TP-0007', vendor_id: 9063, product_id: 2, location_id: '3', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'tp-7', model: 'TP-7 MTP Device', manufacturer: 'teenage engineering', serial: 'TP-0007', connected: true };
         case 'mtp_list_storages': return [{ capacity: 128e9, free_space: 64e9, description: 'fixture' }];
         case 'mtp_scan_tree': return {

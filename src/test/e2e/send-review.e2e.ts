@@ -27,7 +27,7 @@ test('an interrupted send can be checked and completed, and never silently retri
     Object.assign(window, { __CALLS__: calls, __TAURI__: { core: { invoke: async (command: string) => {
       calls.push(command);
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 0x2367, product_id: 1, location_id: 7, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 0x2367, product_id: 1, location_id: '7', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'op-xy', model: 'OP-XY', manufacturer: 'teenage engineering', serial: 'XY-0042', connected: true };
         case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 4e9, description: 'fixture' }];
         case 'mtp_scan_presets': return { presets: [], projects: [], standalone_samples: [] };
@@ -113,7 +113,7 @@ test('the send review takes the keyboard and hands it back', async ({ page }) =>
   await page.addInitScript(() => {
     Object.assign(window, { __TAURI__: { core: { invoke: async (command: string) => {
       switch (command) {
-        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 0x2367, product_id: 1, location_id: 7, mode: 'mtp' }];
+        case 'mtp_list_available': return [{ kind: 'op-xy', model: 'OP-XY', product: 'OP-XY', serial: 'XY-0042', vendor_id: 0x2367, product_id: 1, location_id: '7', mode: 'mtp' }];
         case 'mtp_connect': return { kind: 'op-xy', model: 'OP-XY', manufacturer: 'teenage engineering', serial: 'XY-0042', connected: true };
         case 'mtp_list_storages': return [{ capacity: 8e9, free_space: 4e9, description: 'fixture' }];
         case 'mtp_scan_presets': return { presets: [], projects: [], standalone_samples: [] };
