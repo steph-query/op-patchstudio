@@ -21,12 +21,12 @@ describe('TabNavigation', () => {
   it('should render all tabs with proper ARIA attributes', () => {
     renderWithContext({ currentTab: 'drum', onTabChange: mockOnTabChange });
 
-    const tablist = screen.getByRole('tablist');
-    expect(tablist).toHaveAttribute('aria-label', 'main navigation tabs');
-    expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
+    // Disconnected there is only the workbench section; it is labelled by its heading.
+    const tablist = screen.getByRole('tablist', { name: 'workbench' });
+    expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
 
     const tabs = screen.getAllByRole('tab');
-    // Offline: drum, multisample, takes, library, projects
+    // Offline: takes, drum, multisample, library, projects
     expect(tabs).toHaveLength(5);
 
     tabs.forEach(tab => {
@@ -55,14 +55,20 @@ describe('TabNavigation', () => {
 
     const drumTab = screen.getByRole('tab', { name: 'drum tab' });
 
+    // Down/Right both move on: the list is vertical now, and the horizontal pair still
+    // works for anyone who learned it when this was a strip across the top.
+    fireEvent.keyDown(drumTab, { key: 'ArrowDown' });
+    expect(mockOnTabChange).toHaveBeenCalledWith('multisample');
+
+    vi.clearAllMocks();
     fireEvent.keyDown(drumTab, { key: 'ArrowRight' });
     expect(mockOnTabChange).toHaveBeenCalledWith('multisample');
 
     vi.clearAllMocks();
 
-    // Left from drum wraps to projects (last tab when disconnected)
-    fireEvent.keyDown(drumTab, { key: 'ArrowLeft' });
-    expect(mockOnTabChange).toHaveBeenCalledWith('projects');
+    // Up from drum reaches takes, which leads the workbench section.
+    fireEvent.keyDown(drumTab, { key: 'ArrowUp' });
+    expect(mockOnTabChange).toHaveBeenCalledWith('takes');
   });
 
   it('should handle Home and End key navigation', () => {
@@ -71,7 +77,7 @@ describe('TabNavigation', () => {
     const multisampleTab = screen.getByRole('tab', { name: 'multisample tab' });
 
     fireEvent.keyDown(multisampleTab, { key: 'Home' });
-    expect(mockOnTabChange).toHaveBeenCalledWith('drum');
+    expect(mockOnTabChange).toHaveBeenCalledWith('takes');
 
     vi.clearAllMocks();
 

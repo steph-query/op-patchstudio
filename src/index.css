@@ -39,13 +39,28 @@ a:hover { color: var(--color-accent-primary); }
 .is-connected .signal-dot { background: #c9ea9c; box-shadow: 0 0 0 3px #ffffff15; }
 .studio-edition { display: block; width: 100%; text-align: right; font: 9px/1.4 var(--font-mono); letter-spacing: .12em; color: var(--color-text-tertiary); margin-top: 3px; }
 .studio-workspace { min-width: 0; }
-.tab-bar { display: flex; gap: 5px; padding: 10px; background: #26332c; border-radius: var(--radius-panel) var(--radius-panel) 0 0; overflow-x: auto; scrollbar-width: thin; }
-.tab-bar button { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 9px 16px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #c9d2c7; font: 550 12px/1.3 var(--font-ui); transition: background .15s, color .15s; }
-.tab-bar button:hover { background: #ffffff12; color: #fffefa; }
-.tab-bar button[aria-selected=true] { background: #fffefa; color: #26332c; box-shadow: 0 2px 4px #0002; }
-.tab-bar button[aria-selected=true] .tab-symbol { color: var(--color-accent-primary); }
-.tab-symbol { font: 19px/1 var(--font-mono); }
-.tab-bar small { font: 9px var(--font-mono); border: 1px solid currentColor; border-radius: 3px; padding: 1px 3px; }
+
+/* Sidebar beside the panel. `minmax(0, 1fr)` rather than `1fr` so a wide waveform or a
+   long device path cannot force the grid wider than the window and push the nav off. */
+.studio-body { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 14px; align-items: start; }
+.studio-panels { min-width: 0; }
+
+.studio-nav { position: sticky; top: 14px; display: flex; flex-direction: column; gap: 18px; padding: 14px 10px; background: #26332c; border-radius: var(--radius-panel); }
+.nav-section { display: flex; flex-direction: column; gap: 4px; }
+/* The heading names the half you are in — the device's own name when one is attached. */
+.nav-section-title { margin: 0 0 3px; padding: 0 8px; font: 9px/1.4 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: #8c9a89; }
+.nav-list { display: flex; flex-direction: column; gap: 2px; }
+.studio-nav .studio-tab { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #c9d2c7; font: 550 12px/1.3 var(--font-ui); text-align: left; transition: background .15s, color .15s; }
+.studio-nav .studio-tab:hover { background: #ffffff12; color: #fffefa; }
+.studio-nav .studio-tab[aria-selected=true] { background: #fffefa; color: #26332c; box-shadow: 0 2px 4px #0002; }
+.studio-nav .studio-tab[aria-selected=true] .tab-symbol { color: var(--color-accent-primary); }
+.tab-symbol { font: 17px/1 var(--font-mono); }
+.tab-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-key { font: 9px var(--font-mono); opacity: .55; }
+.nav-hint { margin: 0; padding: 0 8px; font: 10px/1.5 var(--font-ui); color: #8c9a89; }
+.studio-nav .shortcut-hint { align-self: flex-start; color: #8c9a89; }
+.studio-nav .shortcut-hint:hover, .studio-nav .shortcut-hint:focus-visible { color: #fffefa; background: #ffffff12; }
+
 .studio-footer { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 6px 0 16px; color: var(--color-text-tertiary); font: 10px/1.6 var(--font-mono); }
 .footer-separator { padding: 0 8px; color: var(--color-border-primary); }
 .container { max-width: 100%; margin: auto; padding: 0 1rem; }
@@ -85,7 +100,12 @@ a:hover { color: var(--color-accent-primary); }
   .studio-header { align-items: flex-start; gap: 16px; }
   .studio-roster { max-width: 260px; }
   .studio-edition { display: none; }
-  .tab-bar button { padding: 9px 12px; }
+  .studio-body { grid-template-columns: minmax(0, 1fr); }
+  .studio-nav { position: static; flex-direction: row; flex-wrap: wrap; gap: 10px; padding: 10px; }
+  .nav-section { flex: 1 1 auto; }
+  .nav-list { flex-direction: row; flex-wrap: wrap; }
+  .studio-nav .studio-tab { width: auto; padding: 9px 12px; }
+  .nav-hint { flex-basis: 100%; }
 }
 @media(max-width: 600px) {
   .studio-content.cds--content { padding: 16px 10px; }

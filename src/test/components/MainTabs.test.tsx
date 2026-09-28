@@ -33,12 +33,15 @@ describe('MainTabs', () => {
     const mainContainer = screen.getByRole('tabpanel', { name: 'main application content' });
     expect(mainContainer).toBeInTheDocument();
 
-    const tablist = screen.getByRole('tablist', { name: 'main navigation tabs' });
+    // With nothing connected there is one section, named by its heading. A tablist may
+    // only own tabs, so each section is its own tablist rather than one list with
+    // headings inside it.
+    const tablist = screen.getByRole('tablist', { name: 'workbench' });
     expect(tablist).toBeInTheDocument();
-    expect(tablist).toHaveAttribute('aria-orientation', 'horizontal');
+    expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
 
     const tabs = screen.getAllByRole('tab');
-    // Offline: drum, multisample, takes, library, projects
+    // Offline: takes, drum, multisample, library, projects
     expect(tabs).toHaveLength(5);
 
     tabs.forEach(tab => {
@@ -62,7 +65,9 @@ describe('MainTabs', () => {
     renderWithContext();
 
     const tabs = screen.getAllByRole('tab');
-    const expectedTabNames = ['Drum lab', 'Sample lab', 'Takes', 'Library', 'Projects'];
+    // Takes leads the workbench: it is the cross-device hub and the one surface that is
+    // useful before anything is plugged in.
+    const expectedTabNames = ['Takes', 'Drum lab', 'Sample lab', 'Library', 'Projects'];
 
     tabs.forEach((tab, index) => {
       expect(tab).toHaveTextContent(expectedTabNames[index]);

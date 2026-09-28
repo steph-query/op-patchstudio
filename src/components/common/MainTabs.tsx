@@ -53,9 +53,8 @@ export function MainTabs() {
 
   const tabPanelStyle = {
     background: 'var(--color-surface-primary)',
-    borderRadius: '0 0 var(--radius-panel) var(--radius-panel)',
+    borderRadius: 'var(--radius-panel)',
     border: '1px solid var(--color-border-subtle)',
-    borderTop: 'none',
     minHeight: '500px',
     overflow: 'hidden'
   };
@@ -72,11 +71,13 @@ export function MainTabs() {
       <div className="studio-workspace" inert={busy || undefined}>
       <DeviceConnectionBar />
       <FirmwareNotice />
-      <div className="shortcut-hint-row">
-        <button className="shortcut-hint" onClick={showHelp} aria-label="keyboard shortcuts">? shortcuts</button>
-      </div>
-      <TabNavigation currentTab={state.currentTab} onTabChange={handleTabChange} />
       <KeyboardHelp open={helpVisible} onClose={hideHelp} />
+      {/* Navigation beside the work rather than above it: the sidebar is a place list,
+          and the panel is the place. The connection bar stays full width above both
+          because it is about the session, not about any one screen. */}
+      <div className="studio-body">
+      <TabNavigation currentTab={state.currentTab} onTabChange={handleTabChange} onShowShortcuts={showHelp} />
+      <div className="studio-panels">
 
       {state.currentTab === 'drum' && (
         <div role="tabpanel" id="drum-tabpanel" aria-labelledby="drum-tab" aria-label="drum tool content" style={tabPanelStyle}>
@@ -149,6 +150,8 @@ export function MainTabs() {
           <ProjectsPage />
         </div>
       )}
+      </div>
+      </div>
       </div>
     </div>
   );

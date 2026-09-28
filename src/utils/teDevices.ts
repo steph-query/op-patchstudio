@@ -155,8 +155,58 @@ export function detectDeviceKind(model: string | null | undefined, productId?: n
 /** Tabs available when nothing is connected: the builders plus the local library and offline project inspector. */
 export const OFFLINE_TABS: DeviceTab[] = ['drum', 'multisample', 'takes', 'library', 'projects'];
 
+/** The two halves of the app, in the order they are shown. */
+export interface TabGroup {
+  key: 'device' | 'workbench';
+  /** Section heading. The device half is named after what is actually plugged in. */
+  label: string;
+  tabs: DeviceTab[];
+}
+
+/**
+ * Screens that act on the attached instrument, most-browsed first.
+ *
+ * `library` is here only for an OP-1 field, where it shows the patches on the device;
+ * for every other device it is the local preset library and belongs to the workbench.
+ * `projects` reads `.xy` files off the device when one is connected, and is a viewer for
+ * a file you drop on it when none is.
+ */
+const DEVICE_ORDER: DeviceTab[] = ['recordings', 'tapes', 'library', 'projects', 'install', 'storage'];
+
+/** Screens that work with nothing plugged in. Takes leads: it is the cross-device hub. */
+const WORKBENCH_ORDER: DeviceTab[] = ['takes', 'drum', 'multisample', 'library', 'projects'];
+
+function isDeviceScoped(tab: DeviceTab, kind: TeDeviceKind | null | undefined): boolean {
+  if (!kind) return false;
+  if (tab === 'library') return kind === 'op-1-field';
+  return !OFFLINE_TABS.includes(tab) || tab === 'projects';
+}
+
+/**
+ * The navigation, split into the device half and the always-available half.
+ *
+ * **This is the one ordering in the app.** `tabsForDevice` flattens it, `⌘1`–`⌘9` number
+ * it, and the sidebar renders it, so the number on a screen is always the number that
+ * reaches it — `shortcuts.e2e.ts` asserts exactly that against the rendered DOM.
+ *
+ * The device half comes first when something is attached, because that is what you came
+ * to do; with nothing plugged in it is empty and the workbench leads. That is also why
+ * the grouping is computed rather than stored per profile: a tab's half depends on
+ * whether a device is present, not only on which device it is.
+ */
+export function tabGroups(kind: TeDeviceKind | null | undefined): TabGroup[] {
+  const available = kind ? getDeviceProfile(kind).tabs : OFFLINE_TABS;
+  const inOrder = (order: DeviceTab[], want: boolean) =>
+    order.filter(tab => available.includes(tab) && isDeviceScoped(tab, kind) === want);
+  const groups: TabGroup[] = [];
+  const device = inOrder(DEVICE_ORDER, true);
+  if (device.length) groups.push({ key: 'device', label: kind ? getDeviceProfile(kind).label : 'device', tabs: device });
+  groups.push({ key: 'workbench', label: 'workbench', tabs: inOrder(WORKBENCH_ORDER, false) });
+  return groups;
+}
+
 export function tabsForDevice(kind: TeDeviceKind | null | undefined): DeviceTab[] {
-  return kind ? getDeviceProfile(kind).tabs : OFFLINE_TABS;
+  return tabGroups(kind).flatMap(group => group.tabs);
 }
 
 /**

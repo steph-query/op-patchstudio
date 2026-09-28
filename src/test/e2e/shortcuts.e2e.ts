@@ -63,7 +63,13 @@ test('? does not interrupt typing a name', async ({ page }) => {
   await expect(name).toHaveValue('kicksnare');
 
   // And with focus outside a field, the same key does open it.
-  await page.locator('body').click();
+  //
+  // Focus is moved explicitly rather than by clicking the page centre: where that
+  // centre lands depends on the layout, so it can land in *another* text field — and
+  // this assertion would then be testing the opposite of what it says while still
+  // failing honestly. Blurring states the precondition instead of hoping for it.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await expect(page.locator('input:focus, textarea:focus')).toHaveCount(0);
   await page.locator('body').press('?');
   await expect(page.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeVisible();
 });
@@ -83,13 +89,15 @@ test('every visible tab shows the number that reaches it', async ({ page }) => {
 test('a command chord that reaches the page switches tabs', async ({ page }) => {
   // Dispatched on window the way the app listens, because a real ⌘2 may be claimed
   // by the browser around this page. In the packaged app nothing competes for it.
+  // Unplugged the sidebar is the workbench alone: takes, drum, multisample, library,
+  // projects. ⌘3 is therefore the sample builder.
   await page.evaluate(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', metaKey: true, bubbles: true, cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', metaKey: true, bubbles: true, cancelable: true }));
   });
   await expect(page.getByRole('tab', { name: 'multisample tab', exact: true })).toHaveAttribute('aria-selected', 'true');
 
   await page.evaluate(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', metaKey: true, bubbles: true, cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', metaKey: true, bubbles: true, cancelable: true }));
   });
   await expect(page.getByRole('tab', { name: 'drum tab', exact: true })).toHaveAttribute('aria-selected', 'true');
 

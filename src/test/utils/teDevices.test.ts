@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deviceSamplePath, getDeviceProfile, isCapturePath, tabsForDevice, OFFLINE_TABS, resolveTabForDevice } from '../../utils/teDevices';
+import { deviceSamplePath, getDeviceProfile, isCapturePath, tabsForDevice, OFFLINE_TABS, resolveTabForDevice, tabGroups } from '../../utils/teDevices';
 import type { TeDeviceKind } from '../../utils/teDevices';
 
 const KINDS: TeDeviceKind[] = ['op-xy', 'op-1-field', 'tp-7', 'unknown'];
@@ -116,6 +116,49 @@ describe('where a device swap leaves you', () => {
         const resolved = resolveTabForDevice(tab, kind);
         expect(tabsForDevice(kind), `${tab} on ${kind ?? 'nothing'} resolved to ${resolved}`).toContain(resolved);
       }
+    }
+  });
+});
+
+/**
+ * The sidebar's two sections, and the ordering contract behind them.
+ *
+ * `tabGroups` is the only ordering in the app: the sidebar renders it, `tabsForDevice`
+ * flattens it, and `useAppShortcuts` indexes that flat list for ⌘1–⌘9. If the three ever
+ * disagreed, the number printed on a screen would not be the number that reaches it.
+ */
+describe('tabGroups', () => {
+  it('leads with the connected device, and names the section after it', () => {
+    const groups = tabGroups('tp-7');
+    expect(groups.map(group => group.key)).toEqual(['device', 'workbench']);
+    expect(groups[0].label).toBe('tp-7');
+    // Only TP-7 screens in the TP-7 section. The OP-XY builders are still reachable,
+    // under the workbench, which is what they always were.
+    expect(groups[0].tabs).toEqual(['recordings', 'install', 'storage']);
+    expect(groups[1].tabs).toEqual(['takes', 'drum', 'multisample']);
+  });
+
+  it('puts a field\'s patches and tapes on the device side, and an op-xy\'s local library on the workbench', () => {
+    // `library` is the device's patches on a field and the local preset library
+    // everywhere else, so which half it belongs to depends on what is attached.
+    expect(tabGroups('op-1-field')[0].tabs).toEqual(['tapes', 'library', 'install', 'storage']);
+    expect(tabGroups('op-xy')[0].tabs).toEqual(['projects', 'install', 'storage']);
+    expect(tabGroups('op-xy')[1].tabs).toContain('library');
+  });
+
+  it('has no device section when nothing is connected', () => {
+    const groups = tabGroups(null);
+    expect(groups.map(group => group.key)).toEqual(['workbench']);
+    expect(groups[0].tabs).toEqual(['takes', 'drum', 'multisample', 'library', 'projects']);
+  });
+
+  it('flattens to exactly the order the shortcuts number', () => {
+    for (const kind of [null, 'tp-7', 'op-1-field', 'op-xy'] as const) {
+      const flat = tabGroups(kind).flatMap(group => group.tabs);
+      expect(tabsForDevice(kind)).toEqual(flat);
+      // ⌘1–⌘9 can only reach nine, and every screen must be reachable by its number.
+      expect(flat.length).toBeLessThanOrEqual(9);
+      expect(new Set(flat).size).toBe(flat.length);
     }
   });
 });
