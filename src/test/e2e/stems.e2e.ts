@@ -65,7 +65,7 @@ test('a five-channel TP-7 take reaches the stem export from a cold start', async
   // in `countAgreement.test.ts` turned up eight sites doing the same thing.
   await expect(page.getByText(/^1 item ·/)).toBeVisible();
 
-  const stems = page.getByRole('button', { name: /export stereo stems/i }).first();
+  const stems = page.getByRole('button', { name: /split into stems/i }).first();
   await expect(stems).toBeVisible();
   await stems.click();
 

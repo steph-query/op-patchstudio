@@ -60,10 +60,15 @@ for (const kind of ['op-1-field', 'tp-7', 'op-xy']) {
       await expect(page.getByRole('button', { name: /send to device/i })).toHaveCount(0);
       await page.getByRole('tab', { name: kind === 'tp-7' ? 'recordings tab' : 'tapes tab', exact: true }).click();
       if (kind === 'op-1-field') await expect(page.getByText('side a', { exact: true })).toBeVisible();
+      // The row's own button is the stop control; there is no separate mixer bar, because
+      // showing one only while playing moved the list under the pointer mid-click.
       await page.getByRole('button', { name: /^Preview / }).first().click();
-      await expect(page.getByRole('button', { name: 'stop preview' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /^Stop / }).first()).toBeVisible();
+      // Faders appear only for genuinely multi-track audio — an OP-1 field tape, not a
+      // single-track TP-7 recording.
       if (kind === 'op-1-field') await expect(page.getByRole('slider', { name: /preview level/ })).toHaveCount(2);
-      await page.getByRole('button', { name: 'stop preview' }).click();
+      else await expect(page.getByRole('slider', { name: /preview level/ })).toHaveCount(0);
+      await page.getByRole('button', { name: /^Stop / }).first().click();
       await page.getByRole('checkbox').first().check();
       await page.getByRole('button', { name: /export selected/ }).click();
       await expect(page.getByText('/fixture-export', { exact: false })).toBeVisible();

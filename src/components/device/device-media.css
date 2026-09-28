@@ -44,9 +44,8 @@
 .media-name strong { font-size: 14px; font-weight: 600; }
 .media-name small { margin-top: 5px; }
 .media-stems { color: var(--color-interactive-primary); text-underline-offset: 3px; }
-.media-mixer { border-top: 1px solid var(--color-border-subtle); border-bottom: 1px solid var(--color-border-subtle); background: #e5eee2; }
 .media-feedback { border-radius: 0 var(--radius-control) var(--radius-control) 0; }
-@media(max-width:600px) { .connection-panel { padding: 16px; } .connection-heading { flex-direction: column; gap: 3px; } .connection-controls select { min-width: 0; max-width: 100%; } .device-media-hero { padding: 24px 16px; gap: 14px; flex-wrap: wrap; } .device-media-hero h2 { font-size: 26px; } .media-toolbar { flex-wrap: wrap; } .media-toolbar input { flex-basis: 100%; } .media-preview-controls { padding: 14px 16px; } .device-busy { flex-wrap: wrap; } }
+@media(max-width:600px) { .connection-panel { padding: 16px; } .connection-heading { flex-direction: column; gap: 3px; } .connection-controls select { min-width: 0; max-width: 100%; } .device-media-hero { padding: 24px 16px; gap: 14px; flex-wrap: wrap; } .device-media-hero h2 { font-size: 26px; } .media-toolbar { flex-wrap: wrap; } .media-toolbar input { flex-basis: 100%; } .media-preview-controls { padding: 10px 16px; } .device-busy { flex-wrap: wrap; } }
 
 /* Install samples: plan review before any device write. */
 .install-panel .media-toolbar label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--color-text-secondary); }

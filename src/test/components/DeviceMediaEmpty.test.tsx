@@ -5,6 +5,10 @@ import { DeviceMediaPage } from '../../components/device/DeviceMediaPage';
 vi.mock('../../utils/tauriBridge', () => ({
   exportDeviceFiles: vi.fn(),
   exportDeviceStems: vi.fn(),
+  mtpDelete: vi.fn(),
+  mtpRename: vi.fn(),
+  mtpScanTree: vi.fn(),
+  catalogAssets: vi.fn(async () => []),
 }));
 vi.mock('../../hooks/useDeviceSamplePreview', () => ({
   useDeviceSamplePreview: () => ({ play: vi.fn(), stop: vi.fn(), playing: null, levels: [], nodes: { current: [] } }),

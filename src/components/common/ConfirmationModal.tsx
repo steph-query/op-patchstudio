@@ -6,13 +6,20 @@ interface ConfirmationModalProps {
   message: string;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
+  /**
+   * What the confirming button says. Defaults to "ok", which is right for a question
+   * whose answer is reversible and wrong for one whose answer is not: a dialog that
+   * destroys something should name the act, so the button is readable on its own.
+   */
+  confirmLabel?: string;
 }
 
 export function ConfirmationModal({ 
   isOpen, 
   message, 
   onConfirm, 
-  onCancel 
+  onCancel,
+  confirmLabel = 'ok',
 }: ConfirmationModalProps) {
   const modalFocusRef = useRef<HTMLDivElement | null>(null);
   useModalFocus(isOpen, modalFocusRef);
@@ -185,7 +192,7 @@ export function ConfirmationModal({
             }}
           >
             {isLoading && <i className="fas fa-spinner fa-spin" style={{ fontSize: '0.875rem' }}></i>}
-            {isLoading ? 'processing...' : 'ok'}
+            {isLoading ? 'processing...' : confirmLabel}
           </button>
         </div>
       </div>

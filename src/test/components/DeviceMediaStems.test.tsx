@@ -6,6 +6,10 @@ import { exportDeviceStems } from '../../utils/tauriBridge';
 vi.mock('../../utils/tauriBridge', () => ({
   exportDeviceFiles: vi.fn(),
   exportDeviceStems: vi.fn(),
+  mtpDelete: vi.fn(),
+  mtpRename: vi.fn(),
+  mtpScanTree: vi.fn(),
+  catalogAssets: vi.fn(async () => []),
 }));
 vi.mock('../../utils/deviceAudio', () => ({ readDevicePreview: vi.fn() }));
 
@@ -36,7 +40,7 @@ describe('TP-7 stem export', () => {
     });
 
     render(<DeviceMediaPage mode="recordings" />);
-    fireEvent.click(screen.getByRole('button', { name: /export stereo stems/i }));
+    fireEvent.click(screen.getByRole('button', { name: /split into stems/i }));
 
     await waitFor(() => expect(exportDeviceStems).toHaveBeenCalledWith(7, '2026-02-23_112713_000', 900_000_000));
     const status = await screen.findByText(/3 stems written to/i);
@@ -48,7 +52,7 @@ describe('TP-7 stem export', () => {
   it('says nothing when the folder picker is cancelled', async () => {
     vi.mocked(exportDeviceStems).mockResolvedValue(null);
     render(<DeviceMediaPage mode="recordings" />);
-    fireEvent.click(screen.getByRole('button', { name: /export stereo stems/i }));
+    fireEvent.click(screen.getByRole('button', { name: /split into stems/i }));
     await waitFor(() => expect(exportDeviceStems).toHaveBeenCalled());
     expect(screen.queryByText(/stems written/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -59,7 +63,7 @@ describe('TP-7 stem export', () => {
       new Error('This recording has 2 channel(s), so there is nothing to separate. Use Export to save the original file.'),
     );
     render(<DeviceMediaPage mode="recordings" />);
-    fireEvent.click(screen.getByRole('button', { name: /export stereo stems/i }));
+    fireEvent.click(screen.getByRole('button', { name: /split into stems/i }));
     expect(await screen.findByText(/nothing to separate/i)).toBeInTheDocument();
     expect(screen.queryByText(/stems written/i)).not.toBeInTheDocument();
   });
