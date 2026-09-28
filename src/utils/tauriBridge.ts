@@ -185,12 +185,23 @@ export async function mtpReadPartial(handle: number, offset: number, size: numbe
   return toBytes(await invoke<unknown>('mtp_read_partial', { handle, offset, size }));
 }
 
-export async function mtpDelete(handle: number): Promise<void> {
-  return invoke<void>('mtp_delete', { handle });
+/** What a delete did, file by file: nothing is reported that was not read back. */
+export interface DeleteOutcome {
+  deleted: string[];
+  deleted_bytes: number;
+  /** Handles that no longer resolved — already removed, or the list was stale. */
+  already_gone: number;
+  failed: Array<{ name: string; error: string }>;
 }
 
-export async function mtpRename(handle: number, newName: string): Promise<void> {
-  return invoke<void>('mtp_rename', { handle, newName });
+/** Remove files from the device. Irreversible: there is no device-side trash. */
+export async function mtpDelete(handles: number[]): Promise<DeleteOutcome> {
+  return invoke<DeleteOutcome>('mtp_delete', { handles });
+}
+
+/** Rename a file on the device. Resolves to the name the device reports afterwards. */
+export async function mtpRename(handle: number, newName: string): Promise<string> {
+  return invoke<string>('mtp_rename', { handle, newName });
 }
 
 /** Scan whole library folders; the caller interprets the tree for each device family. */

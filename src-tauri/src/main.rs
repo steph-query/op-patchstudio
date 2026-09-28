@@ -196,9 +196,62 @@ async fn mtp_read_partial(state: State<'_, DeviceState>, handle: u32, offset: u6
 
 
 #[tauri::command]
-async fn mtp_delete(state: State<'_, DeviceState>, handle: u32) -> Result<(), String> {
-    let _ = (state, handle);
-    Err("Deletion is disabled: project dependency coverage is incomplete. Export and verify a backup before managing removals outside this app.".into())
+async fn mtp_delete(state: State<'_, DeviceState>, handles: Vec<u32>) -> Result<DeleteOutcome, String> {
+    if handles.is_empty() {
+        return Err("Nothing was selected to delete.".into());
+    }
+    let guard = state.device.lock().await;
+    let device = guard.as_ref().ok_or("No device connected")?;
+    let storages = device.storages().await.map_err(|e| e.to_string())?;
+    let storage = storages.first().ok_or("No storage found")?;
+
+    let mut outcome = DeleteOutcome::default();
+    for handle in handles {
+        let object = ObjectHandle(handle);
+        // Read first: the name is what the report can say, and a handle that no longer
+        // resolves means the file is already gone rather than that deleting it failed.
+        let info = match storage.get_object_info(object).await {
+            Ok(info) => info,
+            Err(_) => { outcome.already_gone += 1; continue; }
+        };
+        if info.is_folder() {
+            // A folder delete is a recursive delete wearing a single confirmation, and
+            // the user approved a list of files. Refused rather than guessed at.
+            outcome.failed.push(DeleteFailure { name: info.filename.clone(), error: "Folders are not deleted here; choose the files inside it.".into() });
+            continue;
+        }
+        match storage.delete(object).await {
+            Ok(()) => {
+                // Verified, not assumed. A firmware that accepts the command and keeps
+                // the file would otherwise leave the list claiming it had gone.
+                match storage.get_object_info(object).await {
+                    Ok(still_there) if still_there.filename == info.filename => outcome.failed.push(DeleteFailure {
+                        name: info.filename.clone(),
+                        error: "The device still reports this file. Nothing was removed.".into(),
+                    }),
+                    _ => { outcome.deleted_bytes += info.size; outcome.deleted.push(info.filename.clone()); }
+                }
+            }
+            Err(error) => outcome.failed.push(DeleteFailure { name: info.filename.clone(), error: error.to_string() }),
+        }
+    }
+    Ok(outcome)
+}
+
+#[derive(Serialize, Default, Clone)]
+struct DeleteFailure {
+    name: String,
+    error: String,
+}
+
+/// What a delete actually did, per file, rather than one overall success flag.
+#[derive(Serialize, Default, Clone)]
+struct DeleteOutcome {
+    deleted: Vec<String>,
+    deleted_bytes: u64,
+    /// Handles that no longer resolved — already removed, or the list was stale.
+    already_gone: usize,
+    failed: Vec<DeleteFailure>,
 }
 
 fn validate_filename(name: &str) -> Result<(), String> {
@@ -209,11 +262,83 @@ fn validate_filename(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Rename a file or folder in place. Project references are not rewritten; OP-XY presets use copy instead.
+/// Whether a rename keeps the file loadable by the instrument that wrote it.
+///
+/// Renaming was refused outright until the owner asked for it on a TP-7, where a recording
+/// is named after the moment it was made and nothing points at it. Two cases genuinely do
+/// break, and they are refused here rather than in the interface, because the native layer
+/// is the boundary that cannot be bypassed:
+///
+/// - **An OP-1 field tape track.** `track_1.aif` … `track_4.aif` *is* the reference — the
+///   number in the name is the track number. Renaming one silently removes it from the tape.
+/// - **An extension change.** The instruments dispatch on it, so `.wav` → `.txt` makes a
+///   file the device will no longer read.
+///
+/// An OP-XY sample is the harder call and is **allowed**: projects reference samples by
+/// path, so renaming one can orphan a reference — but the sample-usage sweep exists to
+/// answer which projects use a file, and refusing outright is what sent people to Finder
+/// to do the same thing with no check at all. The frontend names the risk before asking.
+fn check_rename(current: &str, proposed: &str) -> Result<(), String> {
+    let extension = |name: &str| name.rsplit_once('.').map(|(_, ext)| ext.to_lowercase());
+    if extension(current) != extension(proposed) {
+        return Err(format!(
+            "Keep the .{} ending: the instrument decides how to read a file from it.",
+            extension(current).unwrap_or_default()
+        ));
+    }
+    // `track_3.aif` and friends: the number is the track, so the name is not free text.
+    let stem = current.rsplit_once('.').map(|(stem, _)| stem).unwrap_or(current).to_lowercase();
+    if stem.starts_with("track_") && stem[6..].chars().all(|c| c.is_ascii_digit()) && !stem[6..].is_empty() {
+        return Err(format!(
+            "{current} is a tape track, and the number in its name is how the field finds it. Renaming it would take it off the tape."
+        ));
+    }
+    Ok(())
+}
+
+/// Rename a file on the device, in place.
+///
+/// Verified rather than assumed: the object is read back and the new name confirmed, so a
+/// firmware that accepts the command and ignores it is reported as a failure instead of
+/// leaving the interface showing a name the device does not have.
 #[tauri::command]
-async fn mtp_rename(state: State<'_, DeviceState>, handle: u32, new_name: String) -> Result<(), String> {
-    let _ = (state, handle, new_name);
-    Err("In-place rename is disabled because it may break project links. Use Make a copy instead.".into())
+async fn mtp_rename(state: State<'_, DeviceState>, handle: u32, new_name: String) -> Result<String, String> {
+    let proposed = new_name.trim().to_string();
+    validate_filename(&proposed)?;
+
+    let guard = state.device.lock().await;
+    let device = guard.as_ref().ok_or("No device connected")?;
+    if !device.supports_rename() {
+        return Err("This device's firmware does not support renaming over USB.".into());
+    }
+    let storages = device.storages().await.map_err(|e| e.to_string())?;
+    let storage = storages.first().ok_or("No storage found")?;
+
+    let target = storage.get_object_info(ObjectHandle(handle)).await.map_err(|e| e.to_string())?;
+    if target.is_folder() {
+        return Err("Only files can be renamed here.".into());
+    }
+    if target.filename == proposed {
+        return Ok(proposed);
+    }
+    check_rename(&target.filename, &proposed)?;
+
+    // Nothing is ever replaced: a name already in use is refused before the write, not
+    // discovered afterwards by the file that used to be there being gone.
+    // `parent` is 0 for an object sitting at the storage root, which `list_objects`
+    // spells as `None`.
+    let parent = if target.parent.0 == 0 { None } else { Some(target.parent) };
+    let siblings = storage.list_objects(parent).await.map_err(|e| e.to_string())?;
+    if siblings.iter().any(|object| object.handle != target.handle && object.filename.eq_ignore_ascii_case(&proposed)) {
+        return Err(format!("{proposed} is already in that folder. Choose another name."));
+    }
+
+    storage.rename(ObjectHandle(handle), &proposed).await.map_err(|e| e.to_string())?;
+    let confirmed = storage.get_object_info(ObjectHandle(handle)).await.map_err(|e| format!("Renamed, but the result could not be read back: {e}"))?;
+    if confirmed.filename != proposed {
+        return Err(format!("The device still calls this file {}. Nothing was changed.", confirmed.filename));
+    }
+    Ok(confirmed.filename)
 }
 
 #[derive(Serialize, Clone)]
@@ -341,7 +466,7 @@ async fn mtp_upload_at_path(state: State<'_, DeviceState>, request: tauri::ipc::
         // which the install plan does automatically on a collision — or remove the
         // existing file with whatever transfer tool they use for that.
         return Err(format!(
-            "{} is already in {}. Send it under a different name, or remove the existing file with your usual transfer tool — this app does not replace or delete device content.",
+            "{} is already in {}. Send it under a different name — a write never replaces what is already on the device. To remove the existing file, do it from the device's own file list first.",
             filename.trim(),
             if path.is_empty() { "the root folder" } else { path.as_str() }
         ));
@@ -1560,35 +1685,45 @@ mod tests {
         }
     }
 
+    /// Deleting and renaming are no longer refused — the owner asked for both on their
+    /// own recorder — so what is asserted is the guarantee that replaced the refusal:
+    /// **nothing is destroyed silently, and nothing is reported that was not verified.**
     #[test]
-    fn deleting_and_renaming_on_the_device_stay_refused() {
+    fn deleting_and_renaming_verify_what_they_did() {
         let source = include_str!("main.rs");
-        for (name, expected) in [
-            ("async fn mtp_delete", "Deletion is disabled"),
-            ("async fn mtp_rename", "In-place rename is disabled"),
-        ] {
-            let start = source.find(name).unwrap_or_else(|| panic!("{name} is gone"));
-            let body_start = source[start..].find('{').unwrap() + start;
-            let mut depth = 0usize;
-            let mut end = body_start;
-            for (offset, character) in source[body_start..].char_indices() {
-                match character {
-                    '{' => depth += 1,
-                    '}' => {
-                        depth -= 1;
-                        if depth == 0 { end = body_start + offset; break; }
-                    }
-                    _ => {}
-                }
-            }
-            let body = &source[body_start..=end];
-            assert!(body.contains("Err("), "{name} must refuse");
-            assert!(body.contains(expected), "{name} must explain why: {body}");
-            // A real implementation would have to call one of these.
-            for forbidden in [".delete(", ".rename(", "delete_object", "rename_object", "send_object"] {
-                assert!(!body.contains(forbidden), "{name} now performs {forbidden}, which the guide says is disabled");
-            }
+        for name in ["mtp_delete", "mtp_rename"] {
+            let body = command_body(source, name);
+            // Both read the object back after writing, so a firmware that accepts a
+            // command and ignores it is reported as a failure rather than believed.
+            assert!(body.contains("get_object_info"), "{name} does not read back what it did");
         }
+        let rename = command_body(source, "mtp_rename");
+        assert!(rename.contains("validate_filename"), "rename must reject path separators and reserved characters");
+        assert!(rename.contains("check_rename"), "rename must apply the tape-track and extension rules");
+        assert!(rename.contains("already in that folder"), "rename must refuse a name that is taken rather than replace a file");
+
+        let delete = command_body(source, "mtp_delete");
+        assert!(delete.contains("is_folder"), "delete must refuse folders rather than recursing into them");
+    }
+
+    /// The two renames that break the instrument's own references.
+    #[test]
+    fn a_rename_that_would_break_the_file_is_refused() {
+        // A field tape track: the number in the name is the track number.
+        assert!(check_rename("track_1.aif", "yard door slam.aif").is_err());
+        assert!(check_rename("track_12.aif", "anything.aif").is_err());
+        // Changing what the file claims to be.
+        assert!(check_rename("2026-02-23_112713_000.wav", "slam.txt").is_err());
+        assert!(check_rename("take.wav", "take").is_err());
+
+        // A recorder's take, which is what this was built for, and an OP-XY sample,
+        // which is allowed because the sweep can answer which projects use it.
+        assert!(check_rename("2026-02-23_112713_000.wav", "yard door slam.wav").is_ok());
+        assert!(check_rename("kick.wav", "kick soft.wav").is_ok());
+        // Case-only differences in the extension are the same extension.
+        assert!(check_rename("pad.AIF", "warm pad.aif").is_ok());
+        // Not a tape track, despite starting the same way.
+        assert!(check_rename("track_notes.wav", "session notes.wav").is_ok());
     }
 
     #[test]
