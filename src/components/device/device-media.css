@@ -119,3 +119,35 @@
 .take-rename-edit label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--color-text-secondary); }
 .take-rename-edit input { font: inherit; padding: 4px 6px; min-width: 16rem; }
 .take-rename-edit small { flex-basis: 100%; color: var(--color-text-secondary); font-size: 11px; line-height: 1.7; }
+
+/* The take name reads as text until you want to change it. A button rather than a
+   click handler on the <strong> so it is reachable by keyboard and announced as
+   editable — renaming is the common act on a list of timestamps, not a rare one. */
+.take-rename-trigger { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; cursor: text; border-radius: var(--radius-control); }
+.take-rename-trigger:hover strong { text-decoration: underline dotted; text-underline-offset: 3px; }
+.take-rename-input { width: 100%; max-width: 30rem; padding: .3rem .45rem; border: 1px solid var(--color-interactive-primary); border-radius: var(--radius-control); background: var(--color-surface-primary); color: var(--color-text-primary); font: 600 14px var(--font-ui); }
+
+/* Column headers, on the same grid as `.media-row` so each sits over its column: the
+   checkbox and play button share the leading spacer, and the export button the trailing
+   one. Sticky, so the ordering stays legible while scrolling a long list. */
+.media-head { display: grid; grid-template-columns: 24px 36px minmax(180px, 1fr) 125px 80px 72px; gap: .7rem; align-items: center; position: sticky; top: 0; z-index: 2; padding: .4rem 2rem; background: var(--color-surface-secondary); border-bottom: 1px solid var(--color-border-subtle); }
+.media-head-spacer { grid-column: span 2; }
+.media-head-cell { display: inline-flex; align-items: center; gap: .3rem; min-height: 28px; padding: 0; border: 0; background: none; color: var(--color-text-tertiary); font: 10px var(--font-mono); text-transform: lowercase; letter-spacing: .06em; cursor: pointer; }
+.media-head-cell:hover { color: var(--color-text-primary); }
+.media-head-cell.is-active { color: var(--color-text-primary); }
+.media-head-cell.is-when { justify-content: flex-start; }
+/* Size is right-aligned in the rows, so its header is too. */
+.media-head-cell.is-size { justify-content: flex-end; grid-column: 5 / span 2; }
+.media-head-arrow { font-size: 9px; }
+@media(max-width: 720px) {
+  .media-head { grid-template-columns: 22px 34px 1fr 64px; padding: .4rem 1rem; }
+  .media-head-cell.is-when { display: none; }
+  .media-head-cell.is-size { grid-column: 4; }
+}
+
+.media-hero-actions { display: flex; gap: .5rem; flex: none; }
+/* Outlined rather than filled: delete is available, not encouraged, and it sits beside
+   the export button that is the ordinary thing to do with a selection. */
+.media-danger { border: 1px solid var(--color-danger, #9b2c2c); background: none; color: var(--color-danger, #9b2c2c); padding: .65rem 1rem; font: 11px var(--font-mono); text-transform: lowercase; cursor: pointer; border-radius: var(--radius-control); }
+.media-danger:hover:not(:disabled) { background: var(--color-danger, #9b2c2c); color: var(--color-surface-primary); }
+.media-danger:disabled { opacity: .35; cursor: default; }

@@ -6,6 +6,7 @@ import {
   catalogChoose,
   catalogImportFromDevice,
   catalogImportLocal,
+  catalogLabelAsset,
   catalogOpen,
   catalogTransfers,
 } from '../../utils/tauriBridge';
@@ -59,6 +60,39 @@ export function CaptureLibraryPanel() {
     refresh().catch(error => { if (live) setProblem(describeError(error)); });
     return () => { live = false; };
   }, [refresh]);
+
+  /**
+   * Which take is being renamed inline, and the text so far.
+   *
+   * Renaming is the default act here, not an exception: a TP-7 hands you
+   * `2026-09-27_224345_000` and nothing else, so every take worth keeping gets named.
+   * It used to require selecting a take and finding the field inside the audition panel;
+   * clicking the name is the shortest path to the thing you were always going to do.
+   *
+   * This writes a *label*. The bytes, the file name and the path are untouched, and
+   * nothing on the instrument is renamed — the recorder still lists its own name, and
+   * re-importing the same audio is still recognized as a duplicate.
+   */
+  const [renaming, setRenaming] = useState<{ id: string; text: string } | null>(null);
+  const [renameProblem, setRenameProblem] = useState<string | null>(null);
+
+  const commitRename = useCallback(async () => {
+    if (!renaming) return;
+    const { id, text } = renaming;
+    // Blur fires on the way to Escape and on an unchanged name; neither is a write.
+    const asset = assets.find(item => item.id === id);
+    if (!asset || text.trim() === (asset.label ?? '').trim()) { setRenaming(null); return; }
+    try {
+      const updated = await catalogLabelAsset(id, text.trim());
+      setAssets(current => current.map(item => item.id === updated.id ? updated : item));
+      setRenaming(null);
+      setRenameProblem(null);
+    } catch (error) {
+      // Keep the field open with the text intact: retyping a rejected name is the
+      // irritating part, not being told it was rejected.
+      setRenameProblem(describeError(error));
+    }
+  }, [renaming, assets]);
 
   const knownSources = useMemo(() => knownOrigins(assets), [assets]);
   const candidates = useMemo(
@@ -241,7 +275,28 @@ export function CaptureLibraryPanel() {
           onKeyDown={event => moveFocus(event, index)}
         >
           <div className="media-name">
-            <strong>{takeName(asset)}</strong>
+            {renaming?.id === asset.id
+              ? <input
+                  className="take-rename-input"
+                  aria-label={'Rename ' + takeName(asset)}
+                  autoFocus
+                  value={renaming.text}
+                  onClick={event => event.stopPropagation()}
+                  onChange={event => setRenaming({ id: asset.id, text: event.target.value })}
+                  onBlur={() => void commitRename()}
+                  onKeyDown={event => {
+                    event.stopPropagation();
+                    if (event.key === 'Enter') { event.preventDefault(); void commitRename(); }
+                    // Escape clears first so the blur that follows has nothing to write.
+                    if (event.key === 'Escape') { event.preventDefault(); setRenaming(null); setRenameProblem(null); }
+                  }}
+                />
+              : <button
+                  className="take-rename-trigger"
+                  aria-label={'Rename ' + takeName(asset)}
+                  onClick={event => { event.stopPropagation(); setRenameProblem(null); setRenaming({ id: asset.id, text: asset.label ?? '' }); }}
+                ><strong>{takeName(asset)}</strong></button>}
+            {renaming?.id === asset.id && renameProblem && <small role="alert">{renameProblem}</small>}
             {/* Once a take is named, the name the recorder gave it is provenance rather
                 than noise — it is what the device still calls the file. */}
             {asset.label && <small>filed as {asset.original_name}</small>}

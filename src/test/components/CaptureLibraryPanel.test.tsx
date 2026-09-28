@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CaptureLibraryPanel } from '../../components/library/CaptureLibraryPanel';
-import { catalogAssets, catalogChoose, catalogImportFromDevice, catalogImportLocal, catalogOpen, catalogTransfers } from '../../utils/tauriBridge';
+import { catalogAssets, catalogChoose, catalogImportFromDevice, catalogImportLocal, catalogOpen, catalogTransfers, catalogLabelAsset } from '../../utils/tauriBridge';
 import type { CatalogAsset } from '../../utils/tauriBridge';
 
 vi.mock('../../utils/tauriBridge', () => ({
@@ -11,6 +11,7 @@ vi.mock('../../utils/tauriBridge', () => ({
   catalogAssets: vi.fn(),
   catalogImportFromDevice: vi.fn(),
   catalogTransfers: vi.fn(),
+  catalogLabelAsset: vi.fn(),
 }));
 vi.mock('../../components/library/TakeAudition', () => ({ TakeAudition: () => null }));
 
@@ -358,5 +359,42 @@ describe('CaptureLibraryPanel — recordings already on this Mac', () => {
   it('offers both routes in the empty state', async () => {
     render(<CaptureLibraryPanel />);
     expect(await screen.findByText(/Add files from this Mac, or connect a recorder/)).toBeInTheDocument();
+  });
+
+  /**
+   * Renaming from the list, which is where the user already is.
+   *
+   * A TP-7 names every file after its timestamp, so naming a take is the default act
+   * rather than an occasional one. It used to require selecting the take and finding the
+   * field inside the audition panel. The name itself is the control now.
+   *
+   * It writes a label: `catalog_label_asset` leaves the bytes, the file name and the
+   * path alone, and nothing on the device is renamed.
+   */
+  it('renames a take by clicking its name in the list', async () => {
+    vi.mocked(catalogAssets).mockResolvedValue([asset]);
+    vi.mocked(catalogLabelAsset).mockResolvedValue({ ...asset, label: 'yard door slam' });
+    render(<CaptureLibraryPanel />);
+    fireEvent.click(await screen.findByRole('button', { name: /Rename 2026-02-23_112713_000/ }));
+    const field = screen.getByRole('textbox', { name: /Rename 2026-02-23_112713_000/ });
+    fireEvent.change(field, { target: { value: 'yard door slam' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    await waitFor(() => expect(catalogLabelAsset).toHaveBeenCalledWith('abc123', 'yard door slam'));
+    expect(await screen.findByText('yard door slam')).toBeInTheDocument();
+    // The recorder's own name stays visible as provenance.
+    expect(screen.getByText(/filed as 2026-02-23_112713_000\.wav/)).toBeInTheDocument();
+  });
+
+  it('does not write when the name is unchanged or the edit is abandoned', async () => {
+    vi.mocked(catalogAssets).mockResolvedValue([asset]);
+    render(<CaptureLibraryPanel />);
+    fireEvent.click(await screen.findByRole('button', { name: /Rename / }));
+    fireEvent.blur(screen.getByRole('textbox', { name: /Rename / }));
+    fireEvent.click(await screen.findByRole('button', { name: /Rename / }));
+    const field = screen.getByRole('textbox', { name: /Rename / });
+    fireEvent.change(field, { target: { value: 'discarded' } });
+    fireEvent.keyDown(field, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: /Rename / })).toBeNull());
+    expect(catalogLabelAsset).not.toHaveBeenCalled();
   });
 });
