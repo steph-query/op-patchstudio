@@ -26,8 +26,8 @@ describe('TabNavigation', () => {
     expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
 
     const tabs = screen.getAllByRole('tab');
-    // Offline: takes, drum, multisample, library, projects
-    expect(tabs).toHaveLength(5);
+    // Offline: songs, takes, drum, multisample, library, projects
+    expect(tabs).toHaveLength(6);
 
     tabs.forEach(tab => {
       expect(tab).toHaveAttribute('aria-selected');
@@ -77,7 +77,7 @@ describe('TabNavigation', () => {
     const multisampleTab = screen.getByRole('tab', { name: 'multisample tab' });
 
     fireEvent.keyDown(multisampleTab, { key: 'Home' });
-    expect(mockOnTabChange).toHaveBeenCalledWith('takes');
+    expect(mockOnTabChange).toHaveBeenCalledWith('songs');
 
     vi.clearAllMocks();
 

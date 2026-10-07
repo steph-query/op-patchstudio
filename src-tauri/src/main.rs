@@ -7,6 +7,7 @@ use tauri::State;
 use tokio::sync::Mutex;
 mod backup;
 mod catalog;
+mod collections;
 mod localaudio;
 mod stems;
 mod te;
@@ -1385,6 +1386,16 @@ fn main() {
             mtp_upload_at_path,
             export_device_files,
             stems::export_device_stems,
+            collections::collections_list,
+            collections::collection_create,
+            collections::collection_update,
+            collections::collection_delete,
+            collections::collection_add_member,
+            collections::collection_remove_member,
+            collections::collection_move_member,
+            collections::collection_name_member,
+            collections::collection_prune,
+            collections::collections_using_asset,
             catalog::catalog_open,
             catalog::catalog_choose,
             catalog::catalog_status,

@@ -34,10 +34,11 @@ describe('useAppShortcuts', () => {
   it('numbers the tabs that are actually on screen, top to bottom', () => {
     renderHook(() => useAppShortcuts());
     // Nothing connected there is only the workbench section, in sidebar order.
-    expect(tabsForDevice(null)).toEqual(['takes', 'drum', 'multisample', 'library', 'projects']);
+    expect(tabsForDevice(null)).toEqual(['songs', 'takes', 'drum', 'multisample', 'library', 'projects']);
+    // ⌘3 is the drum builder, which the fixture already shows, so it is not re-dispatched.
     press('3', { metaKey: true });
     press('5', { metaKey: true });
-    expect(tabsSet()).toEqual(['multisample', 'projects']);
+    expect(tabsSet()).toEqual(['library']);
   });
 
   it('follows the connected instrument, whose tabs are a different list', () => {
@@ -45,14 +46,16 @@ describe('useAppShortcuts', () => {
     renderHook(() => useAppShortcuts());
     // The device's own screens come first, so ⌘1 reaches the recorder's files rather
     // than a builder for an instrument that is not plugged in.
-    expect(tabsForDevice('tp-7')).toEqual(['recordings', 'install', 'storage', 'takes', 'drum', 'multisample']);
+    expect(tabsForDevice('tp-7')).toEqual(['recordings', 'install', 'storage', 'songs', 'takes', 'drum', 'multisample']);
 
     // ⌘1 is the drum builder unplugged and the recorder's own files with a TP-7
     // attached, and ⌘6 does not exist unplugged at all. Numbering the visible list is
     // what keeps the key pointing at the tab the user is looking at.
+    // ⌘6 is the takes list with a TP-7 attached — but the state fixture is already on
+    // 'drum', not 'takes', so both of these do dispatch. ⌘4 is Songs.
     press('1', { metaKey: true });
-    press('6', { metaKey: true });
-    expect(tabsSet()).toEqual(['recordings', 'multisample']);
+    press('4', { metaKey: true });
+    expect(tabsSet()).toEqual(['recordings', 'songs']);
   });
 
   it('leaves a number with no tab alone rather than jumping somewhere arbitrary', () => {
@@ -63,21 +66,21 @@ describe('useAppShortcuts', () => {
 
   it('does not re-dispatch the tab already showing, but still moves focus to it', () => {
     const button = document.createElement('button');
-    // ⌘2 is the drum builder when nothing is connected, which is the tab already showing.
+    // ⌘3 is the drum builder when nothing is connected, which is the tab already showing.
     button.id = 'drum-tab';
     document.body.append(button);
     renderHook(() => useAppShortcuts());
-    press('2', { metaKey: true });
+    press('3', { metaKey: true });
     expect(tabsSet()).toEqual([]);
     expect(document.activeElement).toBe(button);
   });
 
   it('accepts ctrl for keyboards without a command key, and ignores alt combinations', () => {
     renderHook(() => useAppShortcuts());
-    press('3', { ctrlKey: true });
+    press('4', { ctrlKey: true });
     expect(tabsSet()).toEqual(['multisample']);
     // ⌥⌘1 and friends belong to the system and the browser.
-    press('4', { metaKey: true, altKey: true });
+    press('5', { metaKey: true, altKey: true });
     expect(tabsSet()).toEqual(['multisample']);
   });
 
@@ -85,7 +88,7 @@ describe('useAppShortcuts', () => {
     const input = document.createElement('input');
     document.body.append(input);
     renderHook(() => useAppShortcuts());
-    press('3', { metaKey: true }, input);
+    press('4', { metaKey: true }, input);
     expect(tabsSet()).toEqual(['multisample']);
   });
 

@@ -135,7 +135,7 @@ describe('tabGroups', () => {
     // Only TP-7 screens in the TP-7 section. The OP-XY builders are still reachable,
     // under the workbench, which is what they always were.
     expect(groups[0].tabs).toEqual(['recordings', 'install', 'storage']);
-    expect(groups[1].tabs).toEqual(['takes', 'drum', 'multisample']);
+    expect(groups[1].tabs).toEqual(['songs', 'takes', 'drum', 'multisample']);
   });
 
   it('puts a field\'s patches and tapes on the device side, and an op-xy\'s local library on the workbench', () => {
@@ -149,7 +149,7 @@ describe('tabGroups', () => {
   it('has no device section when nothing is connected', () => {
     const groups = tabGroups(null);
     expect(groups.map(group => group.key)).toEqual(['workbench']);
-    expect(groups[0].tabs).toEqual(['takes', 'drum', 'multisample', 'library', 'projects']);
+    expect(groups[0].tabs).toEqual(['songs', 'takes', 'drum', 'multisample', 'library', 'projects']);
   });
 
   it('flattens to exactly the order the shortcuts number', () => {

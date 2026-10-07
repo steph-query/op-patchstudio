@@ -41,8 +41,8 @@ describe('MainTabs', () => {
     expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
 
     const tabs = screen.getAllByRole('tab');
-    // Offline: takes, drum, multisample, library, projects
-    expect(tabs).toHaveLength(5);
+    // Offline: songs, takes, drum, multisample, library, projects
+    expect(tabs).toHaveLength(6);
 
     tabs.forEach(tab => {
       expect(tab).toHaveAttribute('aria-controls');
@@ -65,9 +65,9 @@ describe('MainTabs', () => {
     renderWithContext();
 
     const tabs = screen.getAllByRole('tab');
-    // Takes leads the workbench: it is the cross-device hub and the one surface that is
+    // Songs leads the workbench: the binder is where the work is organised, and it is
     // useful before anything is plugged in.
-    const expectedTabNames = ['Takes', 'Drum lab', 'Sample lab', 'Library', 'Projects'];
+    const expectedTabNames = ['Songs', 'Takes', 'Drum lab', 'Sample lab', 'Library', 'Projects'];
 
     tabs.forEach((tab, index) => {
       expect(tab).toHaveTextContent(expectedTabNames[index]);

@@ -18,6 +18,7 @@ import { DeviceMediaPage } from '../device/DeviceMediaPage';
 import { SampleInstallPanel } from '../device/SampleInstallPanel';
 import { TapeAssembly } from '../device/TapeAssembly';
 import { CaptureLibraryPanel } from '../library/CaptureLibraryPanel';
+import { SongsPage } from '../songs/SongsPage';
 import { useDeviceBusy, useDeviceOperationOptions, deviceOperation } from '../../utils/deviceOperation';
 import { describeError } from '../../utils/describeError';
 import { useAppShortcuts } from '../../hooks/useAppShortcuts';
@@ -129,6 +130,10 @@ export function MainTabs() {
 
       {state.currentTab === 'recordings' && (
         <div role="tabpanel" id="recordings-tabpanel" aria-labelledby="recordings-tab" aria-label="TP-7 recordings" style={tabPanelStyle}><DeviceMediaPage mode="recordings" /></div>
+      )}
+
+      {state.currentTab === 'songs' && (
+        <div role="tabpanel" id="songs-tabpanel" aria-labelledby="songs-tab" aria-label="songs and albums" style={tabPanelStyle}><SongsPage /></div>
       )}
 
       {state.currentTab === 'takes' && (

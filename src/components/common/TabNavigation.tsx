@@ -8,8 +8,8 @@ interface TabNavigationProps {
   /** Opens the shortcut sheet. It lives in the nav footer, beside what it describes. */
   onShowShortcuts?: () => void;
 }
-const symbols: Record<DeviceTab, string> = { drum: '▦', multisample: '≋', takes: '◫', library: '▤', tapes: '◎', recordings: '◉', install: '↥', storage: '▥', projects: '⌘' };
-const titles: Record<DeviceTab, string> = { drum: 'Drum lab', multisample: 'Sample lab', takes: 'Takes', library: 'Library', tapes: 'Tapes & albums', recordings: 'Recordings', install: 'Install samples', storage: 'Storage & backup', projects: 'Projects' };
+const symbols: Record<DeviceTab, string> = { drum: '▦', multisample: '≋', takes: '◫', songs: '❖', library: '▤', tapes: '◎', recordings: '◉', install: '↥', storage: '▥', projects: '⌘' };
+const titles: Record<DeviceTab, string> = { drum: 'Drum lab', multisample: 'Sample lab', takes: 'Takes', songs: 'Songs', library: 'Library', tapes: 'Tapes & albums', recordings: 'Recordings', install: 'Install samples', storage: 'Storage & backup', projects: 'Projects' };
 
 /**
  * The app's navigation, as a sidebar of two named sections.

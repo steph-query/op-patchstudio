@@ -9,7 +9,7 @@
 
 export type TeDeviceKind = 'op-xy' | 'op-1-field' | 'tp-7' | 'unknown';
 
-export type DeviceTab = 'drum' | 'multisample' | 'takes' | 'library' | 'tapes' | 'recordings' | 'install' | 'storage' | 'projects';
+export type DeviceTab = 'drum' | 'multisample' | 'takes' | 'songs' | 'library' | 'tapes' | 'recordings' | 'install' | 'storage' | 'projects';
 
 export interface FirmwareSnapshot {
   /** Latest release we researched, not a live check. */
@@ -61,7 +61,7 @@ const PROFILES: Record<TeDeviceKind, DeviceProfile> = {
     roots: ['projects', 'presets', 'samples'],
     // The OP-XY records into its own sample folder rather than a tape.
     captureRoots: ['samples'],
-    tabs: ['drum', 'multisample', 'takes', 'library', 'install', 'storage', 'projects'],
+    tabs: ['drum', 'multisample', 'takes', 'songs', 'library', 'install', 'storage', 'projects'],
     contentNoun: 'presets',
     transferHint: 'com › m4 (labelled t4 on some firmware)',
     canSwitchOverMidi: false,
@@ -80,7 +80,7 @@ const PROFILES: Record<TeDeviceKind, DeviceProfile> = {
     roots: ['drum', 'synth', 'tape', 'album'],
     // Tape tracks and album sides are the recordings; drum and synth are patches.
     captureRoots: ['tape', 'album'],
-    tabs: ['drum', 'multisample', 'takes', 'library', 'tapes', 'install', 'storage'],
+    tabs: ['drum', 'multisample', 'takes', 'songs', 'library', 'tapes', 'install', 'storage'],
     contentNoun: 'patches',
     transferHint: 'shift + com › t4 (disk mode: shift + com › shift + t4)',
     canSwitchOverMidi: false,
@@ -99,7 +99,7 @@ const PROFILES: Record<TeDeviceKind, DeviceProfile> = {
     roots: ['recordings', 'memo'],
     // Everything a TP-7 holds is a recording.
     captureRoots: ['recordings', 'memo'],
-    tabs: ['drum', 'multisample', 'takes', 'recordings', 'install', 'storage'],
+    tabs: ['drum', 'multisample', 'takes', 'songs', 'recordings', 'install', 'storage'],
     contentNoun: 'recordings',
     transferHint: 'stop recording, then use prepare tp-7 with exactly one tp-7 connected, or hold ■ while powering on over usb',
     canSwitchOverMidi: true,
@@ -117,7 +117,7 @@ const PROFILES: Record<TeDeviceKind, DeviceProfile> = {
     label: 'mtp device',
     roots: [],
     captureRoots: [],
-    tabs: ['drum', 'multisample', 'takes', 'storage'],
+    tabs: ['drum', 'multisample', 'takes', 'songs', 'storage'],
     contentNoun: 'files',
     transferHint: 'put the device in mtp mode',
     canSwitchOverMidi: false,
@@ -153,7 +153,7 @@ export function detectDeviceKind(model: string | null | undefined, productId?: n
 }
 
 /** Tabs available when nothing is connected: the builders plus the local library and offline project inspector. */
-export const OFFLINE_TABS: DeviceTab[] = ['drum', 'multisample', 'takes', 'library', 'projects'];
+export const OFFLINE_TABS: DeviceTab[] = ['drum', 'multisample', 'takes', 'songs', 'library', 'projects'];
 
 /** The two halves of the app, in the order they are shown. */
 export interface TabGroup {
@@ -174,7 +174,7 @@ export interface TabGroup {
 const DEVICE_ORDER: DeviceTab[] = ['recordings', 'tapes', 'library', 'projects', 'install', 'storage'];
 
 /** Screens that work with nothing plugged in. Takes leads: it is the cross-device hub. */
-const WORKBENCH_ORDER: DeviceTab[] = ['takes', 'drum', 'multisample', 'library', 'projects'];
+const WORKBENCH_ORDER: DeviceTab[] = ['songs', 'takes', 'drum', 'multisample', 'library', 'projects'];
 
 function isDeviceScoped(tab: DeviceTab, kind: TeDeviceKind | null | undefined): boolean {
   if (!kind) return false;

@@ -81,6 +81,23 @@ pub struct Asset {
     pub regions: Vec<Region>,
 }
 
+impl Asset {
+    /// A minimal asset for tests that only need its identity.
+    #[cfg(test)]
+    pub fn empty_for_test(id: &str) -> Self {
+        Self {
+            id: id.into(),
+            stored_path: format!("originals/{id}.wav"),
+            original_name: format!("{id}.wav"),
+            label: None,
+            bytes: 0,
+            first_imported_unix: 0,
+            occurrences: Vec::new(),
+            regions: Vec::new(),
+        }
+    }
+}
+
 /// One file that was written to a device, with the bytes that were verified.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct TransferFile {
@@ -116,15 +133,24 @@ pub struct Catalog {
     /// Device writes this app made, newest last. Absent in older libraries.
     #[serde(default)]
     pub transfers: Vec<Transfer>,
+    /// Songs and the albums holding them. Absent in libraries written before the binder.
+    #[serde(default)]
+    pub collections: Vec<crate::collections::Collection>,
 }
 
 impl Catalog {
     fn new(now: u64) -> Self {
-        Self { format: FORMAT.into(), version: VERSION, created_unix: now, assets: Vec::new(), transfers: Vec::new() }
+        Self { format: FORMAT.into(), version: VERSION, created_unix: now, assets: Vec::new(), transfers: Vec::new(), collections: Vec::new() }
+    }
+
+    /// An empty catalog for tests that only exercise in-memory shape.
+    #[cfg(test)]
+    pub fn empty_for_test() -> Self {
+        Self::new(0)
     }
 }
 
-fn now_unix() -> u64 {
+pub fn now_unix() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|value| value.as_secs())
@@ -446,7 +472,7 @@ pub fn import_local_files(root: &Path, paths: Vec<PathBuf>) -> Result<Vec<Import
     Ok(outcomes)
 }
 
-fn current_root(state: &State<'_, DeviceState>) -> Result<PathBuf, String> {
+pub fn current_root(state: &State<'_, DeviceState>) -> Result<PathBuf, String> {
     state
         .library
         .lock()

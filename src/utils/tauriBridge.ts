@@ -647,3 +647,87 @@ export async function mtpUploadPreset(
     'x-doxy-token': encodeURIComponent(token),
   } });
 }
+
+// --- The binder: songs, albums and their parts -------------------------------------
+//
+// Grouping is metadata in the library index. Nothing here moves a byte of audio, and no
+// device is touched: the TP-7 refuses to create folders at all, so a song is a Mac-side
+// idea by necessity as well as by design.
+
+/** One part of a song: a whole take, or one marked region of one. */
+export interface CollectionMember {
+  asset_id: string;
+  /** A region of that take, or absent for the whole thing. */
+  region_id?: string | null;
+  /** What this part is called in this song. The take keeps its own name. */
+  name?: string | null;
+  added_unix: number;
+}
+
+export interface CollectionSummary {
+  id: string;
+  name: string;
+  /** The album this song sits in, if any. */
+  parent?: string | null;
+  /** The index card: what this is, in the writer's own words. */
+  note?: string | null;
+  tempo?: number | null;
+  /** The parts, in playing order. Position in this array is the arrangement. */
+  members: CollectionMember[];
+  created_unix: number;
+  /** Songs filed under this album; empty for a song. */
+  child_ids: string[];
+  /** Parts whose take has left the library. Reported rather than silently dropped. */
+  missing_members: number;
+}
+
+export interface CollectionEdit {
+  name?: string;
+  note?: string;
+  tempo?: number;
+  /** `''` moves a song back to the top level; omit to leave the filing alone. */
+  parent?: string;
+}
+
+export async function collectionsList(): Promise<CollectionSummary[]> {
+  return invoke<CollectionSummary[]>('collections_list');
+}
+
+export async function collectionCreate(name: string, parent?: string | null): Promise<CollectionSummary> {
+  return invoke<CollectionSummary>('collection_create', { name, parent: parent ?? null });
+}
+
+export async function collectionUpdate(id: string, edit: CollectionEdit): Promise<CollectionSummary> {
+  return invoke<CollectionSummary>('collection_update', { id, edit });
+}
+
+/** Forget a song. Its takes and audio are untouched; an album's songs move back to the top. */
+export async function collectionDelete(id: string): Promise<CollectionSummary[]> {
+  return invoke<CollectionSummary[]>('collection_delete', { id });
+}
+
+export async function collectionAddMember(id: string, assetId: string, regionId?: string | null, name?: string | null): Promise<CollectionSummary> {
+  return invoke<CollectionSummary>('collection_add_member', { id, assetId, regionId: regionId ?? null, name: name ?? null });
+}
+
+export async function collectionRemoveMember(id: string, index: number): Promise<CollectionSummary> {
+  return invoke<CollectionSummary>('collection_remove_member', { id, index });
+}
+
+/** Move a part. This is the arrangement — order is the whole point. */
+export async function collectionMoveMember(id: string, from: number, to: number): Promise<CollectionSummary> {
+  return invoke<CollectionSummary>('collection_move_member', { id, from, to });
+}
+
+export async function collectionNameMember(id: string, index: number, name: string): Promise<CollectionSummary> {
+  return invoke<CollectionSummary>('collection_name_member', { id, index, name });
+}
+
+export async function collectionPrune(id: string): Promise<CollectionSummary> {
+  return invoke<CollectionSummary>('collection_prune', { id });
+}
+
+/** Every song that uses a take. Reuse across songs is the normal case, not the exception. */
+export async function collectionsUsingAsset(assetId: string): Promise<CollectionSummary[]> {
+  return invoke<CollectionSummary[]>('collections_using_asset', { assetId });
+}

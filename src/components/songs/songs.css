@@ -1,0 +1,61 @@
+/* The binder, the corkboard and the index card.
+   Three columns on a desktop window; stacked below 1100px, where three columns of this
+   width stop being readable before they stop fitting. */
+.songs-page { padding: 0; color: var(--color-text-primary); }
+.songs-layout { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr) minmax(0, 300px); gap: 1px; background: var(--color-border-subtle); min-height: 420px; }
+.songs-layout > section { background: var(--color-surface-primary); padding: 1.25rem; min-width: 0; }
+.songs-layout header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.songs-layout h2 { margin: 0; font-size: 15px; font-weight: 550; letter-spacing: -.01em; }
+.songs-layout header button, .part-picker button { border: 1px solid var(--color-border-secondary); background: var(--color-surface-primary); color: var(--color-text-primary); border-radius: var(--radius-control); padding: .45rem .7rem; font: 11px var(--font-mono); text-transform: lowercase; cursor: pointer; }
+.songs-layout header button:hover:not(:disabled) { background: var(--color-surface-secondary); }
+.songs-empty { margin: 0; padding: .5rem 0; font: 12px/1.6 var(--font-ui); color: var(--color-text-tertiary); }
+.songs-problem { margin: 0 0 1rem; padding: .7rem 1rem; border-radius: var(--radius-control); background: #fdecea; color: #7a271a; font: 12px/1.5 var(--font-ui); }
+.songs-warning { margin: 0 0 .75rem; padding: .6rem .8rem; border-radius: var(--radius-control); background: var(--color-surface-secondary); font: 11px/1.6 var(--font-ui); color: var(--color-text-secondary); }
+button.link { border: 0; background: none; padding: 0; color: var(--color-interactive-primary); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* Binder */
+.binder-list, .binder-children { list-style: none; margin: 0; padding: 0; }
+.binder-children { margin: 2px 0 2px 14px; border-left: 1px solid var(--color-border-subtle); padding-left: 8px; }
+.binder-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 6px; padding: .45rem .5rem; border-radius: var(--radius-control); cursor: pointer; }
+.binder-row:hover { background: var(--color-surface-secondary); }
+.binder-row.is-selected { background: var(--color-surface-raised, var(--color-surface-secondary)); box-shadow: inset 2px 0 0 var(--color-accent-primary); }
+.binder-name { grid-column: 1; display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; cursor: text; }
+.binder-name:hover strong { text-decoration: underline dotted; text-underline-offset: 3px; }
+.binder-row small { grid-column: 1; font: 10px var(--font-mono); color: var(--color-text-tertiary); }
+.binder-row strong { font-size: 13px; font-weight: 550; }
+.binder-delete { grid-row: 1 / span 2; grid-column: 2; width: 24px; height: 24px; border: 0; background: none; color: var(--color-text-tertiary); border-radius: 4px; cursor: pointer; font-size: 14px; }
+.binder-delete:hover { background: var(--color-surface-primary); color: var(--color-danger, #9b2c2c); }
+.binder-rename { width: 100%; padding: .3rem .45rem; border: 1px solid var(--color-interactive-primary); border-radius: var(--radius-control); background: var(--color-surface-primary); color: var(--color-text-primary); font: 600 13px var(--font-ui); }
+.binder-add-child { margin: 4px 0 8px 22px; border: 0; background: none; padding: 0; color: var(--color-text-tertiary); font: 10px var(--font-mono); cursor: pointer; }
+.binder-add-child:hover { color: var(--color-interactive-primary); text-decoration: underline; }
+
+/* Corkboard: the parts, in playing order */
+.part-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.part-card { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: .75rem; padding: .7rem .8rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); background: var(--color-surface-primary); cursor: grab; }
+.part-card:hover { border-color: var(--color-border-secondary); }
+.part-card.is-selected { border-color: var(--color-accent-primary); box-shadow: inset 2px 0 0 var(--color-accent-primary); }
+.part-card.is-missing { opacity: .65; }
+.part-card:active { cursor: grabbing; }
+/* The running number is the arrangement, so it reads as a position rather than a label. */
+.part-index { font: 12px var(--font-mono); color: var(--color-text-tertiary); text-align: right; }
+.part-body { min-width: 0; }
+.part-body strong { display: block; font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.part-body small { display: block; font: 10px var(--font-mono); color: var(--color-text-tertiary); }
+.part-actions { display: flex; gap: 2px; }
+.part-actions button { width: 28px; height: 28px; border: 1px solid transparent; border-radius: 4px; background: none; color: var(--color-text-secondary); cursor: pointer; font-size: 12px; }
+.part-actions button:hover:not(:disabled) { background: var(--color-surface-secondary); border-color: var(--color-border-subtle); }
+.part-actions button:disabled { opacity: .3; cursor: default; }
+.part-picker { display: flex; align-items: flex-end; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; padding: .8rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-control); background: var(--color-surface-secondary); }
+.part-picker label { display: flex; flex-direction: column; gap: .3rem; flex: 1; min-width: 0; font: 10px var(--font-mono); color: var(--color-text-secondary); text-transform: lowercase; }
+.part-picker select { width: 100%; padding: .5rem; border: 1px solid var(--color-border-secondary); border-radius: var(--radius-control); background: var(--color-surface-primary); color: var(--color-text-primary); font: 12px var(--font-ui); }
+
+/* Index card */
+.card-field { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1rem; font: 10px var(--font-mono); color: var(--color-text-secondary); text-transform: lowercase; }
+.card-field textarea, .card-field input, .card-field select { width: 100%; padding: .55rem; border: 1px solid var(--color-border-secondary); border-radius: var(--radius-control); background: var(--color-surface-primary); color: var(--color-text-primary); font: 12px/1.6 var(--font-ui); resize: vertical; }
+.card-facts { display: grid; grid-template-columns: auto 1fr; gap: .3rem .8rem; margin: 0; font: 11px var(--font-mono); }
+.card-facts dt { color: var(--color-text-tertiary); }
+.card-facts dd { margin: 0; color: var(--color-text-primary); overflow-wrap: anywhere; }
+
+@media (max-width: 1100px) {
+  .songs-layout { grid-template-columns: minmax(0, 1fr); }
+}

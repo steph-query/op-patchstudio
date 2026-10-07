@@ -89,15 +89,15 @@ test('every visible tab shows the number that reaches it', async ({ page }) => {
 test('a command chord that reaches the page switches tabs', async ({ page }) => {
   // Dispatched on window the way the app listens, because a real ⌘2 may be claimed
   // by the browser around this page. In the packaged app nothing competes for it.
-  // Unplugged the sidebar is the workbench alone: takes, drum, multisample, library,
-  // projects. ⌘3 is therefore the sample builder.
+  // Unplugged the sidebar is the workbench alone: songs, takes, drum, multisample,
+  // library, projects. ⌘4 is therefore the sample builder.
   await page.evaluate(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', metaKey: true, bubbles: true, cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '4', metaKey: true, bubbles: true, cancelable: true }));
   });
   await expect(page.getByRole('tab', { name: 'multisample tab', exact: true })).toHaveAttribute('aria-selected', 'true');
 
   await page.evaluate(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', metaKey: true, bubbles: true, cancelable: true }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', metaKey: true, bubbles: true, cancelable: true }));
   });
   await expect(page.getByRole('tab', { name: 'drum tab', exact: true })).toHaveAttribute('aria-selected', 'true');
 
